@@ -18,26 +18,46 @@ function config(): array
 
 /**
  * Escapa un valor para imprimirlo de forma segura en HTML.
+ *
+ * @param string|int|null $valor
  */
-function e(string|int|null $valor): string
+function e($valor): string
 {
     return htmlspecialchars((string) $valor, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
 /**
+ * Construye la URL de un recurso de la aplicación a partir de la carpeta en
+ * la que está instalada (funciona igual en la raíz del sitio o en /teatro/).
+ */
+function url(string $ruta = ''): string
+{
+    static $base = null;
+
+    if ($base === null) {
+        $directorio = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/'));
+        $base = rtrim($directorio, '/') . '/';
+    }
+
+    return $base . ltrim($ruta, '/');
+}
+
+/**
  * Redirige con 303 (See Other) para aplicar el patrón POST/Redirect/GET.
  */
-function redirigir(string $url): void
+function redirigir(string $ruta): void
 {
-    header('Location: ' . $url, true, 303);
+    header('Location: ' . url($ruta), true, 303);
     exit;
 }
 
 /**
  * Convierte un valor recibido por la petición en un entero positivo
  * dentro del rango de INT UNSIGNED, o null si no es válido.
+ *
+ * @param mixed $valor
  */
-function entero_positivo(mixed $valor): ?int
+function entero_positivo($valor): ?int
 {
     if (!is_string($valor) && !is_int($valor)) {
         return null;
@@ -78,11 +98,11 @@ function formatear_fecha(string $fechaHora): string
 }
 
 /**
- * Formatea el número de entrada para mostrarlo al comprador (ej. 000042).
+ * Valor para el atributo datetime de <time> a partir de un DATETIME de MySQL.
  */
-function formatear_numero_entrada(int $numeroVenta): string
+function fecha_iso(string $fechaHora): string
 {
-    return str_pad((string) $numeroVenta, 6, '0', STR_PAD_LEFT);
+    return str_replace(' ', 'T', $fechaHora);
 }
 
 /**

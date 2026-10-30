@@ -15,6 +15,19 @@ final class ObraNoDisponibleException extends RuntimeException
 }
 
 /**
+ * Asegura los tipos de una fila de OBRA. Según la versión de PHP y el modo de
+ * consulta, MySQL puede devolver los números como texto.
+ */
+function tipar_obra(array $fila): array
+{
+    $fila['cod_obra'] = (int) $fila['cod_obra'];
+    $fila['aforo'] = (int) $fila['aforo'];
+    $fila['disponibles'] = (int) $fila['disponibles'];
+
+    return $fila;
+}
+
+/**
  * @return list<array{cod_obra: int, nombre: string, fecha_obra: string, aforo: int, disponibles: int, sala: string}>
  */
 function obtener_obras_disponibles(PDO $pdo): array
@@ -25,7 +38,7 @@ function obtener_obras_disponibles(PDO $pdo): array
                AND fecha_obra > NOW()
           ORDER BY fecha_obra ASC, nombre ASC';
 
-    return $pdo->query($sql)->fetchAll();
+    return array_map('tipar_obra', $pdo->query($sql)->fetchAll());
 }
 
 /**
@@ -44,7 +57,7 @@ function obtener_obra_disponible(PDO $pdo, int $codObra): ?array
 
     $obra = $stmt->fetch();
 
-    return $obra === false ? null : $obra;
+    return $obra === false ? null : tipar_obra($obra);
 }
 
 /**
@@ -114,6 +127,12 @@ function obtener_venta(PDO $pdo, int $numeroVenta): ?array
     $stmt->execute(['numero_venta' => $numeroVenta]);
 
     $venta = $stmt->fetch();
+    if ($venta === false) {
+        return null;
+    }
 
-    return $venta === false ? null : $venta;
+    $venta['numero_venta'] = (int) $venta['numero_venta'];
+    $venta['cod_obra'] = (int) $venta['cod_obra'];
+
+    return $venta;
 }

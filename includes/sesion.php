@@ -63,9 +63,11 @@ function emitir_token_compra(int $codObra): string
  * Devuelve los datos asociados a un token emitido por esta sesión,
  * o null si el token no existe o no es válido.
  *
+ * @param mixed $token
+ *
  * @return array{cod_obra: int, numero_venta: int|null}|null
  */
-function obtener_token_compra(mixed $token): ?array
+function obtener_token_compra($token): ?array
 {
     if (!is_string($token) || preg_match('/^[a-f0-9]{64}$/', $token) !== 1) {
         return null;
@@ -93,4 +95,13 @@ function consumir_token_compra(string $token, int $numeroVenta): void
 function venta_pertenece_a_sesion(int $numeroVenta): bool
 {
     return in_array($numeroVenta, $_SESSION['ventas'] ?? [], true);
+}
+
+/**
+ * Indica si el navegador envió la cookie de sesión. Si no la envía, el
+ * navegador tiene las cookies desactivadas y no es posible completar la compra.
+ */
+function navegador_envio_cookie_de_sesion(): bool
+{
+    return isset($_COOKIE[session_name()]);
 }
