@@ -46,6 +46,22 @@ php -S localhost:8000
 # Abrir http://localhost:8000
 ```
 
+## Entorno de desarrollo aislado (opcional, Linux/WSL)
+
+Si no tiene acceso al MySQL del sistema (por ejemplo, porque no recuerda la clave
+de root), el proyecto trae un entorno propio. Levanta una instancia de MySQL con
+el usuario actual, sin `sudo`, en el puerto 3307 y solo en `127.0.0.1`. Guarda
+sus datos en `.dev/` y no toca el MySQL ni el Apache instalados en el sistema.
+
+```bash
+dev/iniciar.sh        # MySQL del proyecto + PHP en http://localhost:8000 (Ctrl+C detiene PHP)
+dev/reiniciar-bd.sh   # Restaura la base TEATRO a su estado inicial
+dev/detener.sh        # Detiene el MySQL del proyecto (los datos se conservan)
+```
+
+La primera ejecución inicializa la base automáticamente. Requiere que los
+binarios `mysqld` y `mysql` estén instalados (paquete `mysql-server`).
+
 ## Cómo probar
 
 | Caso | Resultado esperado |
@@ -133,5 +149,6 @@ guarda como `V-12345678`.
 │   ├── helpers.php        Utilidades (escape, fechas, validación)
 │   └── layout.php         Cabecera, pie y páginas de mensaje
 ├── assets/                CSS y JavaScript (mejora progresiva)
+├── dev/                   Scripts del entorno de desarrollo aislado
 └── database/teatro.sql    Respaldo de la base de datos
 ```

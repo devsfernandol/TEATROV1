@@ -4,6 +4,9 @@
 # Configuración local con credenciales
 /includes/config.local.php
 
+# Entorno de desarrollo local (datos de MySQL, sockets, logs)
+/.dev/
+
 # Logs
 *.log
 
