@@ -1,0 +1,14 @@
+# Enunciado de la prueba (no forma parte de la solución)
+/Prueba*.pdf
+
+# Configuración local con credenciales
+/includes/config.local.php
+
+# Logs
+*.log
+
+# Editores y sistema operativo
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
