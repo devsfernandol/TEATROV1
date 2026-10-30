@@ -18,5 +18,5 @@ fi
 mkdir -p "$RAIZ/dist"
 git archive --format=zip --prefix=teatro/ -o "$SALIDA" "$REF"
 
-echo "✓ Paquete generado: dist/teatro.zip ($(git rev-parse --short "$REF"))"
-unzip -l "$SALIDA" | awk 'NR > 3 && $4 != "" { print "   " $4 }' | head -n -1
+echo "✓ Paquete generado: dist/teatro.zip ($(git rev-parse --short "$REF^{commit}"))"
+python3 -c 'import sys, zipfile; [print("   " + n) for n in zipfile.ZipFile(sys.argv[1]).namelist() if not n.endswith("/")]' "$SALIDA"
