@@ -1,0 +1,9 @@
+# Normalización de fin de línea
+* text=auto eol=lf
+*.pdf binary
+
+# Archivos que no forman parte de la entrega (git archive / dev/empaquetar.sh)
+/dev                export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/.editorconfig      export-ignore
