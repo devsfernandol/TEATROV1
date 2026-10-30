@@ -19,7 +19,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($datosToken === null) {
         // Token inexistente o expirado: se vuelve a mostrar el formulario con uno nuevo.
         $codObra = entero_positivo($_GET['obra'] ?? null);
-        $error = 'Su sesión expiró o el formulario ya no es válido. Por favor, vuelva a intentarlo.';
+        $error = navegador_envio_cookie_de_sesion()
+            ? 'Su sesión expiró. Por favor, confirme nuevamente la compra.'
+            : 'Su navegador no está aceptando cookies. Habilítelas para poder completar la compra.';
         http_response_code(400);
     } elseif ($datosToken['numero_venta'] !== null) {
         // El formulario ya fue procesado (doble envío): no se genera otra venta.
@@ -34,13 +36,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!identificador_valido($identificador)) {
             $error = 'El identificador debe tener entre 5 y 20 caracteres y solo puede contener letras (sin acentos), números y guiones.';
         } else {
+            // Una vez iniciada, la compra termina aunque el usuario cierre la página.
+            ignore_user_abort(true);
+
             try {
                 $numeroVenta = registrar_venta($pdo, $codObra, $identificador);
-            } catch (ObraNoDisponibleException) {
+            } catch (ObraNoDisponibleException $e) {
                 render_pagina_mensaje(
                     409,
                     'Entradas no disponibles',
-                    'Lo sentimos, las entradas de esta obra se agotaron mientras completaba la compra o la función ya no está a la venta. No se realizó ningún cargo.'
+                    'Lo sentimos, las entradas de esta obra se agotaron o la obra ya no está a la venta. No se registró ninguna compra.'
                 );
                 exit;
             }
@@ -61,18 +66,16 @@ if ($obra === null) {
     render_pagina_mensaje(
         404,
         'Obra no disponible',
-        'La obra que busca no existe, ya no tiene entradas o la función ya se realizó.'
+        'La obra que busca no existe, ya no tiene entradas o su fecha ya pasó.'
     );
     exit;
 }
 
-$token ??= emitir_token_compra($obra['cod_obra']);
+$token = $token ?? emitir_token_compra($obra['cod_obra']);
 
 render_cabecera('Comprar entrada');
 ?>
-<nav class="migas" aria-label="Ruta de navegación">
-    <a href="index.php">Cartelera</a> <span aria-hidden="true">›</span> Comprar entrada
-</nav>
+<p class="volver"><a href="<?= e(url('index.php')) ?>">← Volver a las obras disponibles</a></p>
 
 <div class="compra">
     <section class="tarjeta compra__resumen" aria-labelledby="titulo-obra">
@@ -81,7 +84,7 @@ render_cabecera('Comprar entrada');
         <dl class="obra__datos">
             <div>
                 <dt>Fecha</dt>
-                <dd><time datetime="<?= e(str_replace(' ', 'T', $obra['fecha_obra'])) ?>"><?= e(formatear_fecha($obra['fecha_obra'])) ?></time></dd>
+                <dd><time datetime="<?= e(fecha_iso($obra['fecha_obra'])) ?>"><?= e(formatear_fecha($obra['fecha_obra'])) ?></time></dd>
             </div>
             <div>
                 <dt>Sala</dt>
@@ -101,11 +104,11 @@ render_cabecera('Comprar entrada');
             <div class="alerta alerta--error" role="alert" id="error-identificador"><?= e($error) ?></div>
         <?php endif; ?>
 
-        <form method="post" action="comprar.php?obra=<?= e($obra['cod_obra']) ?>" class="formulario" data-envio-unico novalidate>
+        <form method="post" action="<?= e(url('comprar.php?obra=' . $obra['cod_obra'])) ?>" class="formulario" data-envio-unico novalidate>
             <input type="hidden" name="token" value="<?= e($token) ?>">
 
             <div class="campo">
-                <label for="identificador">Identificador (documento de identidad)</label>
+                <label for="identificador">Identificador</label>
                 <input
                     type="text"
                     id="identificador"
@@ -120,12 +123,12 @@ render_cabecera('Comprar entrada');
                     <?= $error !== null ? 'aria-invalid="true" autofocus' : '' ?>
                 >
                 <p class="campo__ayuda" id="ayuda-identificador">
-                    Entre 5 y 20 caracteres: letras, números y guiones. Ejemplo: V-12345678.
+                    Su documento de identidad: entre 5 y 20 caracteres (letras, números y guiones). Ejemplo: V-12345678.
                 </p>
             </div>
 
             <button type="submit" class="boton boton--bloque" data-texto-envio="Procesando compra…">
-                Confirmar compra
+                Comprar entrada
             </button>
         </form>
     </section>
