@@ -372,6 +372,7 @@ Usa el **último commit**, no los cambios sin confirmar.
 | `dev/reiniciar-bd.sh` | Restaura la base desde `database/teatro.sql` |
 | `dev/empaquetar.sh [versión]` | Genera `dist/teatro.zip` (la entrega) desde un commit o etiqueta |
 | `dev/detener.sh` | Detiene el MySQL del proyecto (los datos se conservan) |
+| `dev/generar-guia.sh` | Regenera `GUIA-INSTALACION.pdf` desde `dev/guia/guia.html` (con Chrome o Edge) |
 | `dev/instalar-php.sh` | Compila PHP en `.dev/php` (lo llama `iniciar.sh`) |
 
 Para empezar desde cero:
@@ -434,7 +435,7 @@ completa, así que reintentar no duplica nada.
 | Compra duplicada (doble clic, F5, Atrás) | Cada formulario lleva un token de un solo uso y después de comprar se redirige a la confirmación (POST/Redirect/GET) |
 | CSRF | El mismo token: un formulario de otro sitio no puede comprar |
 | Ver entradas de otros | La confirmación solo muestra las ventas de esa sesión; desde otro navegador se recuperan con número **e** identificador, con intentos limitados por IP |
-| Bots que compran todo | Máximo 4 entradas por identificador y obra (en la misma transacción de la venta) y máximo 10 compras por IP en una hora (`includes/limites.php`) |
+| Bots que compran todo | Máximo 4 entradas por identificador y obra (en la misma transacción de la venta) y máximo 20 compras por IP en una hora (`includes/limites.php`) |
 | Cookie sin `Secure` detrás de un proxy | `es_https()` reconoce `X-Forwarded-Proto` y `Forwarded` |
 | Datos manipulados | La obra y el identificador se validan en el servidor y la disponibilidad se vuelve a comprobar al comprar |
 | Errores técnicos en pantalla | Se registran en el log y el usuario ve una página amigable, también si MySQL no responde |
@@ -480,6 +481,7 @@ teatro/
 ├── assets/css/estilos.css    Estilos
 ├── database/teatro.sql       Respaldo de la base TEATRO con datos de prueba
 ├── LEAME.md                  Instrucciones de instalación de la entrega
+├── GUIA-INSTALACION.pdf      Guía detallada para el evaluador (se genera con dev/generar-guia.sh)
 ├── docker-compose.yml        Producción con Docker (Nginx + PHP-FPM + MySQL)
 ├── .env.example              Configuración opcional de Docker
 ├── docker/                   Configuración de Nginx, PHP y MySQL para Docker

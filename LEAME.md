@@ -5,6 +5,10 @@ disponibles, eligen una, ingresan su identificador y reciben su número de
 entrada. Si cierran el navegador, pueden volver a ver su entrada con ese número
 y su identificador.
 
+> La guía **`GUIA-INSTALACION.pdf`**, incluida en la entrega, explica todo esto
+> con más detalle: instalación paso a paso, guion de pruebas con los resultados
+> esperados y puesta en producción con Docker, Apache o Nginx.
+
 **Resumen para instalar:**
 
 - **Para probarla en su equipo (XAMPP):** copiar la carpeta en `htdocs`,
@@ -304,7 +308,7 @@ En Docker, usar `http://localhost:8080/` en lugar de `http://localhost/teatro/`.
 | Pulsar F5 en la página de confirmación | Se vuelve a mostrar la misma entrada. No se genera otra venta. |
 | Pulsar varias veces seguidas "Comprar entrada" | Se registra una sola venta. |
 | Comprar una 5.ª entrada de la misma obra con el mismo identificador | Mensaje "Este identificador ya tiene el máximo de 4 entradas permitidas para esta obra". No se registra la venta. |
-| Hacer más de 10 compras en una hora desde el mismo equipo | Página "Demasiadas compras". No se registra la venta. |
+| Hacer más de 20 compras en una hora desde el mismo equipo (para verlo rápido, baje el límite a 2 como se indica abajo) | Página "Demasiadas compras". No se registra la venta. |
 | Abrir `comprar.php?obra=6` (agotada), `?obra=7` (fecha pasada), `?obra=999` o `?obra=abc` | Mensaje "Obra no disponible". |
 | Cambiar el número en `confirmacion.php?venta=1` | Mensaje "Entrada no encontrada": no se pueden ver entradas de otros compradores. |
 | En "Consultar mi entrada", escribir un número con un identificador que no le corresponde | "No encontramos una entrada con ese número e identificador". |
@@ -378,7 +382,7 @@ Como la transacción fallida se deshace por completo, reintentar no duplica nada
 | Capa | Qué impide | Dónde |
 |---|---|---|
 | Máximo de **4 entradas por identificador** para cada obra | Que una persona o un script acapare una obra con el mismo identificador. Se comprueba dentro de la misma transacción que descuenta la entrada, así que tampoco se puede superar comprando desde varios navegadores a la vez. | Base de datos (`includes/obras.php`) |
-| Máximo de **10 compras por IP en una hora** | Que un script compre muchas entradas con identificadores distintos desde una misma conexión. | Aplicación (`includes/limites.php`), en cualquier servidor |
+| Máximo de **20 compras por IP en una hora** | Que un script compre muchas entradas con identificadores distintos desde una misma conexión. | Aplicación (`includes/limites.php`), en cualquier servidor |
 | Máximo de **10 consultas de entrada por IP en 15 minutos** | Que alguien adivine entradas ajenas probando números e identificadores. | Aplicación |
 | Límite de solicitudes por segundo y por minuto | Ráfagas de peticiones automáticas. | Nginx (opción A, Docker) |
 
@@ -452,6 +456,7 @@ guarda como `V-12345678`.
 │   └── layout.php         Cabecera, pie y páginas de mensaje
 ├── assets/css/            Hoja de estilos
 ├── database/teatro.sql    Respaldo de la base de datos TEATRO
+├── GUIA-INSTALACION.pdf   Guía detallada de instalación, pruebas y producción
 ├── docker-compose.yml     Producción con Docker: Nginx + PHP-FPM + MySQL (sección 3)
 ├── .env.example           Configuración opcional de Docker
 └── docker/                Configuración de Nginx, PHP y del usuario de MySQL para Docker

@@ -34,7 +34,7 @@ $config = [
         // Entradas que una misma persona (identificador) puede comprar para una obra.
         'entradas_por_comprador' => $limiteDeEntorno('TEATRO_LIMITE_ENTRADAS_COMPRADOR', 4),
         // Compras por dirección IP en una hora.
-        'compras_por_ip'         => $limiteDeEntorno('TEATRO_LIMITE_COMPRAS_IP', 10),
+        'compras_por_ip'         => $limiteDeEntorno('TEATRO_LIMITE_COMPRAS_IP', 20),
         // Consultas de entradas por dirección IP en 15 minutos.
         'consultas_por_ip'       => $limiteDeEntorno('TEATRO_LIMITE_CONSULTAS_IP', 10),
         // Carpeta donde se lleva la cuenta (por defecto, la temporal del sistema).

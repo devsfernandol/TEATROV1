@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Teatro · Guía de instalación, pruebas y puesta en producción</title>
+<style>
+    @page {
+        size: A4;
+        margin: 22mm 18mm 20mm 18mm;
+        @bottom-center {
+            content: "Teatro · Guía de instalación, pruebas y producción   —   página " counter(page) " de " counter(pages);
+            font-family: "Segoe UI", Calibri, Arial, sans-serif;
+            font-size: 8pt;
+            color: #7a7a7a;
+        }
+    }
+    @page :first {
+        margin: 0;
+        @bottom-center { content: none; }
+    }
+
+    :root {
+        --primario: #7a1f2b;
+        --primario-suave: #f6eced;
+        --texto: #222;
+        --suave: #5c5c5c;
+        --borde: #d9d4d4;
+        --codigo-fondo: #f4f2f1;
+        --ok: #1f6b3a;
+        --ok-fondo: #e8f4ec;
+        --aviso: #8a5a00;
+        --aviso-fondo: #fdf3df;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        font-family: "Segoe UI", Calibri, Arial, sans-serif;
+        font-size: 10pt;
+        line-height: 1.5;
+        color: var(--texto);
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* --- Portada ---------------------------------------------------------- */
+    .portada {
+        height: 297mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        padding: 40mm 22mm 24mm;
+        background: linear-gradient(160deg, #5b1520 0%, #7a1f2b 55%, #9b3443 100%);
+        color: #fff;
+        page-break-after: always;
+    }
+    .portada__marca { font-size: 13pt; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.85; }
+    .portada h1 { font-size: 34pt; line-height: 1.1; margin: 10mm 0 6mm; font-weight: 700; }
+    .portada__sub { font-size: 14pt; opacity: 0.92; max-width: 140mm; }
+    .portada__caminos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; margin-top: 16mm; }
+    .portada__camino { background: rgba(255,255,255,0.12); border-radius: 3mm; padding: 5mm; font-size: 9.5pt; }
+    .portada__camino b { display: block; font-size: 11pt; margin-bottom: 1.5mm; }
+    .portada__pie { font-size: 9pt; opacity: 0.8; }
+
+    /* --- Contenido -------------------------------------------------------- */
+    h2 {
+        font-size: 17pt;
+        color: var(--primario);
+        border-bottom: 2px solid var(--primario);
+        padding-bottom: 1.5mm;
+        margin: 0 0 4mm;
+        page-break-before: always;
+        page-break-after: avoid;
+    }
+    h2.sin-salto { page-break-before: auto; }
+    h3 { font-size: 12.5pt; margin: 6mm 0 2mm; color: #3a1016; page-break-after: avoid; }
+    h4 { font-size: 10.5pt; margin: 4mm 0 1.5mm; page-break-after: avoid; }
+    p { margin: 0 0 2.5mm; }
+    ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+    li { margin-bottom: 1mm; }
+    a { color: var(--primario); }
+
+    code {
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 9pt;
+        background: var(--codigo-fondo);
+        padding: 0.2mm 1mm;
+        border-radius: 1mm;
+    }
+    pre {
+        font-family: Consolas, "Courier New", monospace;
+        font-size: 8.6pt;
+        line-height: 1.4;
+        background: #1f1b1c;
+        color: #f2eeee;
+        padding: 3mm 4mm;
+        border-radius: 2mm;
+        margin: 1.5mm 0 3.5mm;
+        white-space: pre-wrap;
+        word-break: break-word;
+        page-break-inside: avoid;
+    }
+    pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+    pre .c { color: #9fbf8f; }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1.5mm 0 4mm;
+        font-size: 9pt;
+        page-break-inside: auto;
+    }
+    tr { page-break-inside: avoid; }
+    th {
+        background: var(--primario);
+        color: #fff;
+        text-align: left;
+        padding: 1.6mm 2.2mm;
+        font-weight: 600;
+    }
+    td { border-bottom: 1px solid var(--borde); padding: 1.6mm 2.2mm; vertical-align: top; }
+    tr:nth-child(even) td { background: #faf8f8; }
+
+    .nota, .aviso, .ok {
+        border-left: 1.2mm solid;
+        padding: 2.5mm 3.5mm;
+        margin: 2mm 0 4mm;
+        border-radius: 0 2mm 2mm 0;
+        page-break-inside: avoid;
+    }
+    .nota { border-color: var(--primario); background: var(--primario-suave); }
+    .aviso { border-color: #d9a21b; background: var(--aviso-fondo); }
+    .ok { border-color: var(--ok); background: var(--ok-fondo); }
+    .nota p:last-child, .aviso p:last-child, .ok p:last-child { margin-bottom: 0; }
+
+    .paso {
+        display: grid;
+        grid-template-columns: 9mm 1fr;
+        gap: 3mm;
+        margin: 0 0 3.5mm;
+        page-break-inside: avoid;
+    }
+    .paso__num {
+        width: 8mm; height: 8mm;
+        border-radius: 50%;
+        background: var(--primario);
+        color: #fff;
+        font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 10pt;
+    }
+    .paso__cuerpo > :last-child { margin-bottom: 0; }
+    .paso__titulo { font-weight: 700; margin-bottom: 1mm; }
+    .esperado { color: var(--ok); font-weight: 600; }
+
+    .indice { columns: 2; column-gap: 10mm; font-size: 10pt; }
+    .indice ol { padding-left: 5mm; }
+    .indice li { break-inside: avoid; }
+
+    .check td:first-child { width: 7mm; font-size: 12pt; color: var(--primario); text-align: center; }
+    .chip { display: inline-block; background: var(--primario-suave); color: var(--primario); border-radius: 1mm; padding: 0 1.5mm; font-size: 8.5pt; font-weight: 600; }
+    .dos-col { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+</style>
+</head>
+<body>
+
+<!-- ======================================================================= -->
+<section class="portada">
+    <div>
+        <div class="portada__marca">🎭 Teatro · Venta de entradas en línea</div>
+        <h1>Guía de instalación, pruebas y puesta en producción</h1>
+        <p class="portada__sub">Solución a la prueba técnica PHP + MySQL. Esta guía explica, paso a paso,
+            cómo instalar la aplicación, cómo comprobar que cumple cada punto del enunciado y cómo
+            dejarla funcionando en un servidor de producción.</p>
+
+        <div class="portada__caminos">
+            <div class="portada__camino"><b>Probar en un equipo</b>XAMPP en Windows.<br>Unos 10 minutos.<br>Sección 3.</div>
+            <div class="portada__camino"><b>Producción con Docker</b>Un solo comando en cualquier servidor.<br>Unos 10 minutos.<br>Sección 4.</div>
+            <div class="portada__camino"><b>Producción con Apache o Nginx</b>Servidor Linux que ya tiene PHP y MySQL.<br>Unos 20 minutos.<br>Sección 5.</div>
+        </div>
+    </div>
+    <div class="portada__pie">Octubre de 2026 · Acompaña al archivo LEAME.md de la entrega, que resume lo mismo en formato de texto.</div>
+</section>
+
+<!-- ======================================================================= -->
+<h2 class="sin-salto">Contenido</h2>
+<div class="indice">
+<ol>
+    <li>Qué contiene la entrega</li>
+    <li>Requisitos</li>
+    <li>Instalación para probar en un equipo (XAMPP)</li>
+    <li>Producción con Docker (recomendada)</li>
+    <li>Producción en un servidor Linux con Apache o Nginx</li>
+    <li>Datos de prueba</li>
+    <li>Cómo probar la solución, paso a paso</li>
+    <li>Configuración</li>
+    <li>Solución de problemas</li>
+    <li>Cómo funciona por dentro</li>
+    <li>Lista de comprobación para producción</li>
+</ol>
+</div>
+
+<h3>Resumen del enunciado y dónde se cumple</h3>
+<table>
+    <tr><th>Lo que pide el enunciado</th><th>Cómo se resolvió</th></tr>
+    <tr><td>Base de datos <code>TEATRO</code> con las tablas <code>OBRA</code> y <code>VENTAS</code> y sus campos</td><td><code>database/teatro.sql</code>: crea el esquema, las tablas con tipos de datos elegidos con criterio, claves, índices y restricciones, y carga datos de prueba.</td></tr>
+    <tr><td>Página con las obras disponibles (con entradas y con fecha mayor que la actual)</td><td><code>index.php</code> (la primera página se llama <i>index</i>).</td></tr>
+    <tr><td>Al elegir una obra se pide el identificador y se genera la venta</td><td><code>comprar.php</code></td></tr>
+    <tr><td>Número de entrada autoincremental que se muestra al usuario</td><td><code>VENTAS.numero_venta</code> es <code>AUTO_INCREMENT</code>; <code>confirmacion.php</code> lo muestra.</td></tr>
+    <tr><td><code>VENTAS</code> se actualiza con cada compra y <code>OBRA</code> resta una disponible</td><td>Ambas cosas en una sola transacción (<code>includes/obras.php</code>), sin posibilidad de vender por encima del aforo.</td></tr>
+    <tr><td>Respaldo de la base de datos</td><td><code>database/teatro.sql</code></td></tr>
+    <tr><td>Archivo LÉAME con los pasos adicionales</td><td><code>LEAME.md</code> y esta guía.</td></tr>
+    <tr><td>Ambiente de producción, sin ningún tipo de error</td><td>Manejo de errores sin detalles técnicos en pantalla, validaciones en el servidor, protección contra compras masivas, configuración de producción lista (Docker, Apache o Nginx) y 131 pruebas automáticas más 89 comprobaciones de instalación, todas superadas con PHP 8.1 y 8.5.</td></tr>
+</table>
+
+<!-- ======================================================================= -->
+<h2>1. Qué contiene la entrega</h2>
+
+<p>La entrega es una carpeta llamada <code>teatro</code> (o el archivo <code>teatro.zip</code>, que la contiene). Su contenido:</p>
+
+<table>
+    <tr><th style="width:38%">Archivo o carpeta</th><th>Para qué sirve</th></tr>
+    <tr><td><code>index.php</code></td><td>Página principal: lista de obras disponibles.</td></tr>
+    <tr><td><code>comprar.php</code></td><td>Muestra la obra elegida, pide el identificador y registra la venta.</td></tr>
+    <tr><td><code>confirmacion.php</code></td><td>Muestra el número de entrada y los datos de la compra.</td></tr>
+    <tr><td><code>consultar.php</code></td><td>Permite volver a ver una entrada desde cualquier navegador, con su número y el identificador del comprador.</td></tr>
+    <tr><td><code>assets/css/estilos.css</code></td><td>Hoja de estilos. La aplicación no usa JavaScript.</td></tr>
+    <tr><td><code>includes/</code></td><td>Código interno (conexión, consultas, sesión, límites, plantillas). No se abre desde el navegador.</td></tr>
+    <tr><td><code>includes/config.local.example.php</code></td><td>Plantilla para indicar otra contraseña de MySQL u otros límites.</td></tr>
+    <tr><td><code>database/teatro.sql</code></td><td>Respaldo de la base de datos <code>TEATRO</code> con datos de prueba.</td></tr>
+    <tr><td><code>docker-compose.yml</code>, <code>docker/</code>, <code>.env.example</code></td><td>Instalación de producción con Docker (sección 4).</td></tr>
+    <tr><td><code>LEAME.md</code></td><td>Instrucciones en texto (resumen de esta guía).</td></tr>
+    <tr><td><code>GUIA-INSTALACION.pdf</code></td><td>Esta guía.</td></tr>
+</table>
+
+<h3>Tres formas de instalar</h3>
+<table>
+    <tr><th>Forma</th><th>Cuándo usarla</th><th>Qué hay que tener</th><th>Sección</th></tr>
+    <tr><td><b>XAMPP</b></td><td>Revisar la solución en un equipo con Windows.</td><td>XAMPP con PHP 8.1 o superior.</td><td>3</td></tr>
+    <tr><td><b>Docker</b> <span class="chip">recomendada</span></td><td>Dejarla en producción con el menor trabajo posible.</td><td>Un servidor con Docker. Nada más: PHP, MySQL y el servidor web vienen en contenedores.</td><td>4</td></tr>
+    <tr><td><b>Apache o Nginx</b></td><td>Un servidor Linux que ya tiene PHP y MySQL.</td><td>PHP 8.1+, MySQL 8.0.16+ o MariaDB 10.3+, Apache o Nginx.</td><td>5</td></tr>
+</table>
+
+<!-- ======================================================================= -->
+<h2>2. Requisitos</h2>
+
+<table>
+    <tr><th style="width:26%">Componente</th><th>Versión y detalles</th></tr>
+    <tr><td>PHP</td><td><b>8.1 o superior.</b> La aplicación se probó completa con PHP 8.1 y PHP 8.5. Necesita la extensión <code>pdo_mysql</code>, que viene activada en XAMPP, WAMP y Laragon.</td></tr>
+    <tr><td>Base de datos</td><td><b>MySQL 8.0.16 o superior</b>, o <b>MariaDB 10.3 o superior</b>. XAMPP trae MariaDB, que sirve. Desarrollado y probado con MySQL 8.0.</td></tr>
+    <tr><td>Servidor web</td><td>Apache (por ejemplo, el de XAMPP) o Nginx con PHP-FPM.</td></tr>
+    <tr><td>Navegador</td><td>Cualquiera actual, con las cookies habilitadas (la compra usa una cookie de sesión).</td></tr>
+    <tr><td>Docker (opcional)</td><td>Docker Engine 24 o superior con <code>docker compose</code> (o Docker Desktop en Windows y macOS). Reemplaza todo lo anterior.</td></tr>
+</table>
+
+<div class="nota">
+    <p><b>¿Por qué no MySQL 5.7?</b> La base de datos usa restricciones <code>CHECK</code> para que la propia base impida datos imposibles, como tener más entradas disponibles que el aforo. MySQL 5.7 acepta esas restricciones pero no las aplica (se aplican desde MySQL 8.0.16; MariaDB las aplica desde la versión 10.2). Además, MySQL 5.7 dejó de recibir actualizaciones en octubre de 2023.</p>
+</div>
+
+<h3>Cómo saber qué versiones tiene</h3>
+<table>
+    <tr><th>Qué</th><th>XAMPP (Windows, Símbolo del sistema)</th><th>Linux</th></tr>
+    <tr><td>PHP</td><td><code>C:\xampp\php\php.exe -v</code></td><td><code>php -v</code></td></tr>
+    <tr><td>Extensión pdo_mysql</td><td><code>C:\xampp\php\php.exe -m | findstr pdo_mysql</code></td><td><code>php -m | grep pdo_mysql</code></td></tr>
+    <tr><td>MySQL o MariaDB</td><td><code>C:\xampp\mysql\bin\mysql.exe --version</code></td><td><code>mysql --version</code></td></tr>
+</table>
+
+<!-- ======================================================================= -->
+<h2>3. Instalación para probar en un equipo (XAMPP)</h2>
+
+<p>Este camino sirve para revisar la solución en un equipo con Windows. Si ya tiene XAMPP instalado, empiece en el paso 2.</p>
+
+<div class="paso"><div class="paso__num">1</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Instalar XAMPP</div>
+    <p>Descargar XAMPP para Windows desde <code>https://www.apachefriends.org</code> (una versión con PHP 8.1 o superior) e instalarlo con las opciones por defecto en <code>C:\xampp</code>.</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">2</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Iniciar Apache y MySQL</div>
+    <p>Abrir el <b>XAMPP Control Panel</b> y pulsar <b>Start</b> en <b>Apache</b> y en <b>MySQL</b>. Los dos nombres deben quedar con fondo verde.</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">3</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Copiar la aplicación</div>
+    <p>Descomprimir <code>teatro.zip</code> (o copiar la carpeta <code>teatro</code>) dentro de <code>C:\xampp\htdocs\</code>. Debe quedar así:</p>
+<pre>C:\xampp\htdocs\teatro\index.php
+C:\xampp\htdocs\teatro\comprar.php
+C:\xampp\htdocs\teatro\database\teatro.sql
+...</pre>
+    <p>Si al descomprimir queda una carpeta dentro de otra (<code>htdocs\teatro\teatro\index.php</code>), mueva la interior un nivel arriba.</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">4</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Restaurar la base de datos con phpMyAdmin</div>
+    <ol>
+        <li>Abrir <code>http://localhost/phpmyadmin</code> en el navegador.</li>
+        <li>Pulsar la pestaña <b>Importar</b> (arriba).</li>
+        <li>En <b>Archivo a importar</b>, pulsar <b>Seleccionar archivo</b> y elegir <code>C:\xampp\htdocs\teatro\database\teatro.sql</code>.</li>
+        <li>Dejar el resto de opciones como están y pulsar <b>Importar</b> (o <b>Continuar</b>), al final de la página.</li>
+    </ol>
+    <p class="esperado">Resultado esperado: un mensaje verde de importación exitosa y, en la columna de la izquierda, la base <code>teatro</code> con las tablas <code>obra</code> y <code>ventas</code>.</p>
+    <p>No hace falta crear la base antes: el script la crea. En Windows, MariaDB muestra los nombres en minúsculas; la aplicación funciona igual.</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">5</div><div class="paso__cuerpo">
+    <div class="paso__titulo">(Alternativa al paso 4) Restaurar desde la consola</div>
+    <p>Abrir el <b>Símbolo del sistema</b> (CMD, no PowerShell) y ejecutar:</p>
+<pre>C:\xampp\mysql\bin\mysql.exe -u root &lt; C:\xampp\htdocs\teatro\database\teatro.sql</pre>
+    <p>Si su usuario <code>root</code> tiene contraseña, agregue <code>-p</code> y escríbala cuando la pida.</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">6</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Configurar la conexión (solo si root tiene contraseña)</div>
+    <p>La aplicación se conecta a <code>localhost:3306</code> con el usuario <code>root</code> sin contraseña, que es lo que trae XAMPP. <b>Si no cambió esa contraseña, salte este paso.</b> Si la cambió:</p>
+    <ol>
+        <li>Copiar <code>includes\config.local.example.php</code> con el nombre <code>includes\config.local.php</code>.</li>
+        <li>Abrirlo con el Bloc de notas y escribir la contraseña:</li>
+    </ol>
+<pre>return [
+    'db' => [
+        'host'     => 'localhost',
+        'port'     => 3306,
+        'user'     => 'root',
+        'password' => 'su_contraseña',
+    ],
+];</pre>
+</div></div>
+
+<div class="paso"><div class="paso__num">7</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Abrir la aplicación</div>
+    <p>Ir a <b><code>http://localhost/teatro/</code></b>.</p>
+    <p class="esperado">Resultado esperado: la página «Obras disponibles» con 5 obras.</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">8</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Comprobar que los archivos internos están protegidos</div>
+    <p>Abrir <code>http://localhost/teatro/database/teatro.sql</code> y <code>http://localhost/teatro/includes/config.php</code>.</p>
+    <p class="esperado">Resultado esperado: «Forbidden» / «Acceso prohibido» (error 403) en los dos.</p>
+    <p>XAMPP aplica los archivos <code>.htaccess</code> que traen las carpetas <code>includes/</code>, <code>database/</code> y <code>docker/</code>.</p>
+</div></div>
+
+<!-- ======================================================================= -->
+<h2>4. Producción con Docker (recomendada)</h2>
+
+<p>Con Docker, un solo comando levanta tres servicios ya configurados para producción: el servidor web (Nginx), PHP y MySQL. No hace falta instalar ni configurar PHP, MySQL ni Apache en el servidor.</p>
+
+<h3>Qué queda funcionando</h3>
+<table>
+    <tr><th style="width:22%">Servicio</th><th>Qué hace</th></tr>
+    <tr><td><code>web</code> (Nginx)</td><td>Es lo único accesible desde fuera (puerto 8080 por defecto). Solo ejecuta las cuatro páginas públicas y sirve la hoja de estilos; cualquier otra ruta (<code>includes/</code>, <code>database/</code>, <code>.env</code>…) responde 404. Limita las solicitudes por IP.</td></tr>
+    <tr><td><code>php</code> (PHP 8.5-FPM)</td><td>Configuración de producción: los errores van al log, nunca a la pantalla. Sistema de archivos de solo lectura.</td></tr>
+    <tr><td><code>db</code> (MySQL 8.4)</td><td>Sin puertos publicados: solo el servicio <code>php</code> puede conectarse, por una red interna sin salida a Internet. La aplicación usa el usuario <code>teatro_app</code>, que solo puede leer, insertar, actualizar y borrar filas de <code>TEATRO</code>. La contraseña de <code>root</code> es aleatoria.</td></tr>
+</table>
+<p>Los tres servicios se reinician solos si fallan o si se reinicia el servidor. Los datos se guardan en un volumen de Docker y se conservan entre reinicios.</p>
+
+<h3>4.1 Instalar Docker (si el servidor no lo tiene)</h3>
+<table>
+    <tr><th style="width:26%">Sistema</th><th>Cómo</th></tr>
+    <tr><td>Ubuntu 22.04 o 24.04</td><td><code>sudo apt update &amp;&amp; sudo apt install -y docker.io docker-compose-v2</code></td></tr>
+    <tr><td>Otras distribuciones Linux</td><td>Seguir <code>https://docs.docker.com/engine/install/</code></td></tr>
+    <tr><td>Windows o macOS</td><td>Instalar <b>Docker Desktop</b> desde <code>https://www.docker.com/products/docker-desktop/</code> y abrirlo.</td></tr>
+</table>
+<p>Para comprobar la instalación: <code>docker compose version</code> debe mostrar una versión.</p>
+
+<h3>4.2 Levantar la aplicación</h3>
+
+<div class="paso"><div class="paso__num">1</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Copiar la aplicación al servidor</div>
+    <p>Por ejemplo, en <code>/opt/teatro</code>. Desde el equipo donde está el ZIP:</p>
+<pre>scp teatro.zip usuario@IP_DEL_SERVIDOR:/tmp/
+ssh usuario@IP_DEL_SERVIDOR
+sudo apt install -y unzip
+sudo unzip /tmp/teatro.zip -d /opt/        <span class="c"># crea /opt/teatro</span></pre>
+</div></div>
+
+<div class="paso"><div class="paso__num">2</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Revisar la configuración (recomendado)</div>
+<pre>cd /opt/teatro
+sudo cp .env.example .env
+sudo nano .env</pre>
+    <p>Cambie al menos <code>TEATRO_DB_PASSWORD</code> por una clave propia (solo letras, números, puntos y guiones). Las demás opciones están explicadas en la sección 8. <b>Hágalo antes del paso 3</b>: la clave se fija la primera vez que se crea la base.</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">3</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Levantar los servicios</div>
+<pre>cd /opt/teatro
+sudo docker compose up -d</pre>
+    <p>La primera vez tarda uno o dos minutos: descarga las imágenes, prepara PHP, crea la base <code>TEATRO</code> e importa <code>database/teatro.sql</code>.</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">4</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Comprobar que está en marcha</div>
+<pre>sudo docker compose ps</pre>
+    <p class="esperado">Resultado esperado: los servicios <code>web</code>, <code>php</code> y <code>db</code> en estado «running» o «Up», y <code>db</code> como «healthy».</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">5</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Abrir el puerto en el cortafuegos (si lo hay)</div>
+<pre>sudo ufw allow 8080/tcp</pre>
+</div></div>
+
+<div class="paso"><div class="paso__num">6</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Abrir la aplicación</div>
+    <p>Ir a <code>http://IP_DEL_SERVIDOR:8080/</code> (o <code>http://localhost:8080/</code> si Docker está en el mismo equipo).</p>
+    <p class="esperado">Resultado esperado: «Obras disponibles» con 5 obras. Y <code>http://IP_DEL_SERVIDOR:8080/database/teatro.sql</code> responde «404 Not Found».</p>
+</div></div>
+
+<div class="nota"><p>Si en la carpeta existe <code>includes/config.local.php</code> (por ejemplo, de una prueba anterior con XAMPP), bórrelo: tiene prioridad sobre la configuración de Docker y haría que la aplicación busque MySQL en otro lugar.</p></div>
+
+<h3>4.3 Publicarla con un dominio y HTTPS</h3>
+<p>Para producción real conviene un dominio con certificado HTTPS. La forma más simple es poner <b>Caddy</b> delante, que obtiene y renueva el certificado solo:</p>
+<ol>
+    <li>Apuntar el dominio (por ejemplo, <code>teatro.ejemplo.com</code>) a la IP del servidor, con un registro DNS de tipo A.</li>
+    <li>Hacer que el puerto 8080 solo se escuche dentro del servidor: en <code>.env</code>, poner <code>TEATRO_PUERTO=127.0.0.1:8080</code> y aplicar con <code>sudo docker compose up -d</code>.</li>
+    <li>Instalar Caddy y configurarlo:</li>
+</ol>
+<pre>sudo apt install -y caddy        <span class="c"># si apt no lo encuentra: https://caddyserver.com/docs/install</span>
+sudo nano /etc/caddy/Caddyfile</pre>
+<p>Reemplazar el contenido por:</p>
+<pre>teatro.ejemplo.com {
+    reverse_proxy 127.0.0.1:8080
+}</pre>
+<pre>sudo systemctl reload caddy
+sudo ufw allow 80/tcp &amp;&amp; sudo ufw allow 443/tcp
+sudo ufw delete allow 8080/tcp      <span class="c"># el 8080 ya no se usa desde fuera</span></pre>
+<p>Al abrir <code>https://teatro.ejemplo.com</code> se verá la aplicación con candado. La aplicación reconoce el HTTPS por el encabezado <code>X-Forwarded-Proto</code> que envía el proxy, y marca la cookie de sesión como <code>Secure</code>. Nginx, dentro de Docker, toma la IP real del visitante de <code>X-Forwarded-For</code>, para que los límites por IP se apliquen a cada visitante y no al proxy. Si ya usa Nginx o Apache como proxy, sirve igual: deben reenviar a <code>http://127.0.0.1:8080</code> con esos dos encabezados.</p>
+
+<h3>4.4 Operación diaria</h3>
+<table>
+    <tr><th style="width:36%">Para</th><th>Comando (desde <code>/opt/teatro</code>)</th></tr>
+    <tr><td>Ver el estado</td><td><code>sudo docker compose ps</code></td></tr>
+    <tr><td>Ver los errores de PHP y avisos de la aplicación</td><td><code>sudo docker compose logs php</code></td></tr>
+    <tr><td>Consultar la base de datos</td><td><code>sudo docker compose exec db sh -c 'mysql -uteatro_app -p"$TEATRO_DB_PASSWORD" TEATRO'</code></td></tr>
+    <tr><td>Respaldar la base de datos</td><td><code>sudo docker compose exec -T db sh -c 'mysqldump --single-transaction --no-tablespaces -uteatro_app -p"$TEATRO_DB_PASSWORD" TEATRO' &gt; respaldo.sql</code></td></tr>
+    <tr><td>Detener (los datos se conservan)</td><td><code>sudo docker compose down</code></td></tr>
+    <tr><td>Volver a levantar</td><td><code>sudo docker compose up -d</code></td></tr>
+    <tr><td>Volver a los datos de prueba iniciales (borra las ventas)</td><td><code>sudo docker compose down -v &amp;&amp; sudo docker compose up -d</code></td></tr>
+    <tr><td>Actualizar la aplicación a una versión nueva</td><td>Reemplazar los archivos de la carpeta (sin borrar <code>.env</code>) y ejecutar <code>sudo docker compose up -d --build</code>.</td></tr>
+</table>
+
+<!-- ======================================================================= -->
+<h2>5. Producción en un servidor Linux con Apache o Nginx</h2>
+
+<p>Para un servidor que ya tiene (o tendrá) PHP y MySQL instalados directamente. Los ejemplos son para Ubuntu 22.04 o 24.04; en Debian, cambie <code>mysql-server</code> por <code>mariadb-server</code>.</p>
+
+<h3>5.1 Pasos comunes</h3>
+
+<div class="paso"><div class="paso__num">1</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Instalar los paquetes</div>
+<pre><span class="c"># Con Apache:</span>
+sudo apt update &amp;&amp; sudo apt install -y apache2 php libapache2-mod-php php-mysql mysql-server unzip
+<span class="c"># Con Nginx:</span>
+sudo apt update &amp;&amp; sudo apt install -y nginx php-fpm php-mysql mysql-server unzip</pre>
+    <p>Comprobar que PHP es 8.1 o superior con <code>php -v</code>.</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">2</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Copiar la aplicación</div>
+<pre><span class="c"># Apache: /var/www/html/teatro  (se abrirá en http://servidor/teatro/)</span>
+sudo unzip /tmp/teatro.zip -d /var/www/html/
+<span class="c"># Nginx: /var/www/teatro  (se abrirá en la raíz del dominio)</span>
+sudo unzip /tmp/teatro.zip -d /var/www/</pre>
+    <p>Los archivos pueden quedar con dueño <code>root</code>: el servidor web solo necesita leerlos.</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">3</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Restaurar la base de datos</div>
+<pre>sudo mysql &lt; /var/www/html/teatro/database/teatro.sql     <span class="c"># o /var/www/teatro/... con Nginx</span></pre>
+</div></div>
+
+<div class="paso"><div class="paso__num">4</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Crear el usuario de la aplicación con permisos mínimos</div>
+    <p>En producción la aplicación no debe usar <code>root</code>. Este usuario solo puede leer, insertar, actualizar y borrar filas de <code>TEATRO</code>:</p>
+<pre>sudo mysql -e "CREATE USER 'teatro_app'@'localhost' IDENTIFIED BY 'una_clave_segura';
+               GRANT SELECT, INSERT, UPDATE, DELETE ON TEATRO.* TO 'teatro_app'@'localhost';"</pre>
+</div></div>
+
+<div class="paso"><div class="paso__num">5</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Configurar la conexión</div>
+<pre>cd /var/www/html/teatro        <span class="c"># o /var/www/teatro con Nginx</span>
+sudo cp includes/config.local.example.php includes/config.local.php
+sudo nano includes/config.local.php   <span class="c"># 'user' => 'teatro_app', 'password' => 'una_clave_segura'</span>
+sudo chown root:www-data includes/config.local.php
+sudo chmod 640 includes/config.local.php   <span class="c"># solo el servidor web puede leer la clave</span></pre>
+</div></div>
+
+<h3>5.2 Con Apache</h3>
+
+<div class="paso"><div class="paso__num">6</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Bloquear las carpetas internas</div>
+    <p>Ubuntu y Debian ignoran los archivos <code>.htaccess</code> por defecto (<code>AllowOverride None</code>), así que el bloqueo se hace en la configuración de Apache. Crear el archivo:</p>
+<pre>sudo nano /etc/apache2/conf-available/teatro.conf</pre>
+    <p>con este contenido:</p>
+<pre>&lt;DirectoryMatch "^/var/www/html/teatro/(includes|database|docker)(/|$)"&gt;
+    Require all denied
+&lt;/DirectoryMatch&gt;
+&lt;FilesMatch "^(\.env.*|docker-compose\.yml|.*\.md)$"&gt;
+    Require all denied
+&lt;/FilesMatch&gt;</pre>
+    <p>Activarlo y comprobar:</p>
+<pre>sudo a2enconf teatro &amp;&amp; sudo systemctl reload apache2
+curl -I http://localhost/teatro/database/teatro.sql</pre>
+    <p class="esperado">Resultado esperado: <code>HTTP/1.1 403 Forbidden</code>.</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">7</div><div class="paso__cuerpo">
+    <div class="paso__titulo">HTTPS con un dominio</div>
+<pre>sudo apt install -y certbot python3-certbot-apache
+sudo certbot --apache</pre>
+    <p>Certbot pide el dominio, obtiene el certificado y configura la redirección a HTTPS. La renovación es automática.</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">8</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Solo si Apache está detrás de un proxy o balanceador</div>
+    <p>Para que los límites por IP vean la IP real del visitante y no la del proxy, activar <code>mod_remoteip</code> indicando la IP del proxy (aquí, <code>10.0.0.5</code> como ejemplo):</p>
+<pre>sudo a2enmod remoteip
+printf 'RemoteIPHeader X-Forwarded-For\nRemoteIPTrustedProxy 10.0.0.5\n' | sudo tee /etc/apache2/conf-available/remoteip.conf
+sudo a2enconf remoteip &amp;&amp; sudo systemctl reload apache2</pre>
+    <p>El HTTPS detrás del proxy se detecta solo (encabezados <code>X-Forwarded-Proto</code> o <code>Forwarded</code>).</p>
+</div></div>
+
+<p class="esperado">La aplicación queda en <code>https://dominio/teatro/</code> (o <code>http://IP_DEL_SERVIDOR/teatro/</code> sin dominio).</p>
+
+<h3>5.3 Con Nginx y PHP-FPM</h3>
+<p>Con Nginx no se usan los <code>.htaccess</code>. La configuración siguiente es una lista de lo único que se puede abrir; todo lo demás no existe para el navegador.</p>
+
+<div class="paso"><div class="paso__num">6</div><div class="paso__cuerpo">
+    <div class="paso__titulo">Crear el sitio</div>
+<pre>ls /run/php/                     <span class="c"># anote el nombre del socket, por ejemplo php8.3-fpm.sock</span>
+sudo nano /etc/nginx/sites-available/teatro</pre>
+<pre>server {
+    listen 80;
+    server_name teatro.ejemplo.com;
+    root /var/www/teatro;
+
+    # Solo se ejecutan las páginas públicas.
+    location ~ ^/(index|comprar|confirmacion|consultar)\.php$ {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;    # el socket anotado arriba
+    }
+
+    location ^~ /assets/ { try_files $uri =404; }
+    location = / { rewrite ^ /index.php last; }
+
+    # Todo lo demás (includes/, database/, docker/, .env...) responde 404.
+    location / { return 404; }
+}</pre>
+<pre>sudo ln -s /etc/nginx/sites-available/teatro /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default      <span class="c"># si este servidor es solo para Teatro</span>
+sudo nginx -t &amp;&amp; sudo systemctl reload nginx
+curl -I http://localhost/database/teatro.sql</pre>
+    <p class="esperado">Resultado esperado: <code>nginx -t</code> dice «syntax is ok» y la última línea muestra <code>HTTP/1.1 404 Not Found</code>.</p>
+</div></div>
+
+<div class="paso"><div class="paso__num">7</div><div class="paso__cuerpo">
+    <div class="paso__titulo">HTTPS con un dominio</div>
+<pre>sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx</pre>
+</div></div>
+
+<!-- ======================================================================= -->
+<h2>6. Datos de prueba</h2>
+
+<p><code>database/teatro.sql</code> carga 7 obras. Sus fechas se calculan <b>a partir del momento en que se importa</b>, así que siempre hay obras futuras para probar, sin importar el día en que se revise.</p>
+
+<table>
+    <tr><th>Cód.</th><th>Obra</th><th>Fecha</th><th>Aforo</th><th>Disponibles</th><th>¿Aparece en la lista?</th></tr>
+    <tr><td>1</td><td>La casa de Bernarda Alba</td><td>en 3 días, 20:00</td><td>120</td><td>120</td><td>Sí</td></tr>
+    <tr><td>2</td><td>Bodas de sangre</td><td>en 7 días, 19:30</td><td>80</td><td>78</td><td>Sí</td></tr>
+    <tr><td>3</td><td>La vida es sueño</td><td>en 10 días, 18:00</td><td>5</td><td><b>2</b></td><td>Sí, hasta que se vendan las 2</td></tr>
+    <tr><td>4</td><td>Don Juan Tenorio</td><td>en 14 días, 21:00</td><td>200</td><td>200</td><td>Sí</td></tr>
+    <tr><td>5</td><td>El sí de las niñas</td><td>en 21 días, 17:00</td><td>60</td><td>60</td><td>Sí</td></tr>
+    <tr><td>6</td><td>Luces de bohemia</td><td>en 5 días, 20:30</td><td>3</td><td><b>0</b></td><td><b>No</b>: está agotada</td></tr>
+    <tr><td>7</td><td>Fuenteovejuna</td><td><b>hace 2 días</b></td><td>50</td><td>48</td><td><b>No</b>: su fecha ya pasó</td></tr>
+</table>
+
+<p>La tabla <code>VENTAS</code> trae 10 ventas previas (coherentes con las disponibles de cada obra), así que <b>la primera compra nueva genera la entrada número 11</b>.</p>
+<p>Para volver al estado inicial en cualquier momento, basta con importar <code>database/teatro.sql</code> otra vez (en Docker: <code>docker compose down -v &amp;&amp; docker compose up -d</code>).</p>
+
+<!-- ======================================================================= -->
+<h2>7. Cómo probar la solución, paso a paso</h2>
+
+<p>Las direcciones usan <code>http://localhost/teatro/</code> (XAMPP). En Docker, use <code>http://localhost:8080/</code>; en Nginx, la raíz del dominio. Conviene empezar con la base recién importada, para que los números coincidan con los de esta guía.</p>
+
+<h3>7.1 Recorrido principal (lo que pide el enunciado)</h3>
+<table class="check">
+    <tr><th></th><th style="width:44%">Acción</th><th>Resultado esperado</th></tr>
+    <tr><td>☐</td><td><b>1.</b> Abrir <code>http://localhost/teatro/</code>.</td><td>Página «Obras disponibles» con <b>5 obras</b> ordenadas por fecha, cada una con fecha y hora, sala y entradas disponibles. <i>Luces de bohemia</i> (agotada) y <i>Fuenteovejuna</i> (fecha pasada) <b>no</b> aparecen.</td></tr>
+    <tr><td>☐</td><td><b>2.</b> Pulsar «Comprar entrada» en <i>La vida es sueño</i>.</td><td>Se muestra la obra elegida (fecha, sala, «2 de 5» disponibles) y un campo <b>Identificador</b>.</td></tr>
+    <tr><td>☐</td><td><b>3.</b> Escribir <code>V-12345678</code> y pulsar «Comprar entrada».</td><td>«¡Compra realizada con éxito!» con el <b>número de entrada 11</b>, la obra, la fecha, la sala, el comprador y la fecha de compra.</td></tr>
+    <tr><td>☐</td><td><b>4.</b> Verificar la base de datos (phpMyAdmin → pestaña SQL, o la consola) con las dos consultas de abajo.</td><td>Hay una venta 11 de la obra 3 para <code>V-12345678</code>, y <code>disponibles</code> de la obra 3 bajó de 2 a 1.</td></tr>
+    <tr><td>☐</td><td><b>5.</b> Volver a «Obras disponibles».</td><td><i>La vida es sueño</i> muestra «1 de 5».</td></tr>
+    <tr><td>☐</td><td><b>6.</b> Comprar la última entrada de <i>La vida es sueño</i> (cualquier identificador válido).</td><td>Se genera la entrada <b>12</b> y la obra <b>deja de aparecer</b> en la lista, porque ya no tiene entradas.</td></tr>
+</table>
+
+<pre>SELECT * FROM TEATRO.VENTAS ORDER BY numero_venta DESC LIMIT 1;
+<span class="c">-- numero_venta 11, cod_obra 3, comprador V-12345678, fecha_compra = el momento de la compra</span>
+
+SELECT cod_obra, nombre, aforo, disponibles FROM TEATRO.OBRA WHERE cod_obra = 3;
+<span class="c">-- disponibles = 1</span></pre>
+
+<h3>7.2 Recuperar una entrada desde otro navegador</h3>
+<table class="check">
+    <tr><th></th><th style="width:44%">Acción</th><th>Resultado esperado</th></tr>
+    <tr><td>☐</td><td>Abrir la aplicación en otro navegador o en una ventana privada y escribir en la barra <code>…/confirmacion.php?venta=11</code>.</td><td>«Entrada no encontrada»: las entradas no se ven cambiando el número en la dirección.</td></tr>
+    <tr><td>☐</td><td>Pulsar «Consultar mi entrada» (arriba a la derecha) y escribir <code>11</code> y <code>V-12345678</code>.</td><td>Se muestra la entrada 11 completa.</td></tr>
+    <tr><td>☐</td><td>Repetir con <code>11</code> y otro identificador, por ejemplo <code>V99999999</code>.</td><td>«No encontramos una entrada con ese número e identificador».</td></tr>
+</table>
+
+<h3>7.3 Errores controlados</h3>
+<table class="check">
+    <tr><th></th><th style="width:44%">Acción</th><th>Resultado esperado</th></tr>
+    <tr><td>☐</td><td>Pulsar «Comprar entrada» con el identificador vacío.</td><td>«Ingrese su identificador para continuar». No se registra ninguna venta.</td></tr>
+    <tr><td>☐</td><td>Escribir <code>ab</code>, <code>&lt;script&gt;</code> o <code>1' OR '1'='1</code> como identificador.</td><td>Mensaje con el formato esperado (5 a 20 letras, números o guiones). No se registra ninguna venta y el texto ingresado se muestra tal cual, sin ejecutarse.</td></tr>
+    <tr><td>☐</td><td>Escribir <code>v-12.345.678</code> como identificador.</td><td>Se acepta y se guarda normalizado como <code>V-12345678</code>.</td></tr>
+    <tr><td>☐</td><td>Pulsar F5 en la página de confirmación (y aceptar si el navegador pregunta).</td><td>Se vuelve a mostrar la misma entrada. No se genera otra venta.</td></tr>
+    <tr><td>☐</td><td>En el formulario de compra, pulsar «Comprar entrada» varias veces seguidas.</td><td>Se registra <b>una sola</b> venta.</td></tr>
+    <tr><td>☐</td><td>Comprar en <i>Bodas de sangre</i> 4 entradas con el mismo identificador y luego intentar una quinta.</td><td>Las 4 primeras se registran; la quinta muestra «Este identificador ya tiene el máximo de 4 entradas permitidas para esta obra» y no se registra.</td></tr>
+    <tr><td>☐</td><td>Abrir <code>comprar.php?obra=6</code> (agotada), <code>?obra=7</code> (fecha pasada), <code>?obra=999</code> y <code>?obra=abc</code>.</td><td>«Obra no disponible» en todos los casos.</td></tr>
+    <tr><td>☐</td><td>Detener MySQL (en XAMPP, botón <i>Stop</i>; en Docker, <code>docker compose stop db</code>) y recargar la página.</td><td>«Servicio no disponible», sin ningún detalle técnico. Al volver a iniciar MySQL, todo funciona de nuevo.</td></tr>
+</table>
+
+<h3>7.4 Protección contra compras masivas</h3>
+<table class="check">
+    <tr><th></th><th style="width:44%">Acción</th><th>Resultado esperado</th></tr>
+    <tr><td>☐</td><td>Hacer más de 20 compras en una hora desde el mismo equipo. Para comprobarlo rápido, baje antes el límite a 2 (<code>'compras_por_ip' =&gt; 2</code> en <code>config.local.php</code>, o <code>TEATRO_LIMITE_COMPRAS_IP=2</code> en <code>.env</code> y <code>docker compose up -d</code>; ver sección 8).</td><td>Al superar el límite, página «Demasiadas compras». No se registra la venta. Vuelva a dejar el límite como estaba al terminar.</td></tr>
+    <tr><td>☐</td><td>Hacer más de 10 consultas en «Consultar mi entrada» en 15 minutos.</td><td>A partir de la 11.ª, página «Demasiadas consultas».</td></tr>
+</table>
+<div class="nota"><p>El límite por defecto (20 compras por hora) alcanza de sobra para todas las pruebas de esta guía. Para hacer más compras desde un mismo equipo, súbalo o desactívelo (con <code>0</code>) como se explica en la sección 8.</p></div>
+
+<h3>7.5 Seguridad</h3>
+<table class="check">
+    <tr><th></th><th style="width:44%">Acción</th><th>Resultado esperado</th></tr>
+    <tr><td>☐</td><td>Abrir <code>…/database/teatro.sql</code> y <code>…/includes/config.php</code>.</td><td>403 (XAMPP y Apache) o 404 (Docker y Nginx). Nunca se descarga ni se muestra el archivo.</td></tr>
+    <tr><td>☐</td><td>Ver el código fuente de cualquier página (Ctrl+U).</td><td>No hay JavaScript ni datos internos; los textos de las obras aparecen escapados.</td></tr>
+</table>
+
+<h3>7.6 Lo que no se puede probar a mano (y cómo se probó)</h3>
+<p>Algunos escenarios necesitan muchas peticiones al mismo tiempo. Se probaron con pruebas automáticas, superadas con PHP 8.1 y PHP 8.5:</p>
+<table>
+    <tr><th style="width:52%">Escenario</th><th>Resultado comprobado</th></tr>
+    <tr><td>20 personas compran a la vez las 2 últimas entradas de una obra</td><td>Exactamente 2 ventas; las otras 18 reciben «Entradas no disponibles». Nunca se vende por encima del aforo.</td></tr>
+    <tr><td>El mismo formulario enviado 10 veces a la vez (doble clic con conexión lenta)</td><td>1 sola venta; las 10 respuestas llevan a la misma entrada.</td></tr>
+    <tr><td>El mismo identificador compra desde 5 navegadores a la vez</td><td>Exactamente 4 ventas (el máximo por persona); la quinta se rechaza.</td></tr>
+    <tr><td>MySQL bloqueado momentáneamente por otra operación</td><td>La compra se reintenta sola y se completa una sola vez.</td></tr>
+    <tr><td>MySQL caído o contraseña incorrecta</td><td>Página amigable sin detalles técnicos; el detalle queda solo en el log del servidor, sin la contraseña.</td></tr>
+    <tr><td>Después de todas las pruebas</td><td>En todas las obras se cumple <code>disponibles = aforo − ventas</code>, y los números de venta son correlativos.</td></tr>
+</table>
+
+<!-- ======================================================================= -->
+<h2>8. Configuración</h2>
+
+<p>La aplicación funciona sin configurar nada con XAMPP. Para cambiar algo:</p>
+<ul>
+    <li><b>XAMPP, Apache o Nginx:</b> copiar <code>includes/config.local.example.php</code> como <code>includes/config.local.php</code> y escribir solo los valores que se quieran cambiar.</li>
+    <li><b>Docker:</b> copiar <code>.env.example</code> como <code>.env</code> y cambiar los valores. Después, <code>docker compose up -d</code>.</li>
+</ul>
+
+<table>
+    <tr><th style="width:31%">Opción (config.local.php)</th><th style="width:31%">Variable (.env / entorno)</th><th style="width:12%">Defecto</th><th>Qué hace</th></tr>
+    <tr><td><code>db.host</code>, <code>db.port</code></td><td><code>TEATRO_DB_HOST</code>, <code>TEATRO_DB_PORT</code></td><td>localhost, 3306</td><td>Dónde está MySQL.</td></tr>
+    <tr><td><code>db.user</code>, <code>db.password</code></td><td><code>TEATRO_DB_USER</code>, <code>TEATRO_DB_PASSWORD</code></td><td>root, vacía</td><td>Usuario y contraseña de MySQL. En Docker el usuario es siempre <code>teatro_app</code>.</td></tr>
+    <tr><td><code>limites.entradas_por_comprador</code></td><td><code>TEATRO_LIMITE_ENTRADAS_COMPRADOR</code></td><td>4</td><td>Entradas que una persona (identificador) puede comprar para cada obra.</td></tr>
+    <tr><td><code>limites.compras_por_ip</code></td><td><code>TEATRO_LIMITE_COMPRAS_IP</code></td><td>20</td><td>Compras por dirección IP en una hora.</td></tr>
+    <tr><td><code>limites.consultas_por_ip</code></td><td><code>TEATRO_LIMITE_CONSULTAS_IP</code></td><td>10</td><td>Consultas de entradas por dirección IP en 15 minutos.</td></tr>
+    <tr><td><code>debug</code></td><td><code>TEATRO_DEBUG</code></td><td>false</td><td>Muestra el detalle técnico de los errores. Solo para diagnosticar una instalación; <b>nunca en producción</b>.</td></tr>
+    <tr><td>—</td><td><code>TEATRO_PUERTO</code></td><td>8080</td><td>Solo Docker: puerto público. <code>127.0.0.1:8080</code> lo deja accesible solo desde el propio servidor (para usar un proxy con HTTPS).</td></tr>
+    <tr><td>—</td><td><code>TEATRO_ZONA_HORARIA</code></td><td>-06:00</td><td>Solo Docker: zona horaria de MySQL, que decide qué obras ya pasaron.</td></tr>
+</table>
+<p>En los tres límites, el valor <code>0</code> lo desactiva. Ejemplo de <code>config.local.php</code> para hacer muchas compras de prueba con XAMPP:</p>
+<pre>&lt;?php
+return [
+    'limites' => [
+        'compras_por_ip' => 0,   // sin límite de compras por IP mientras se prueba
+    ],
+];</pre>
+
+<!-- ======================================================================= -->
+<h2>9. Solución de problemas</h2>
+
+<table>
+    <tr><th style="width:32%">Síntoma</th><th>Causa probable y solución</th></tr>
+    <tr><td>«Servicio no disponible»</td><td>La aplicación no puede conectarse a MySQL. Verifique que MySQL esté iniciado, que se haya importado <code>database/teatro.sql</code> y que la contraseña sea la correcta (sección 3, paso 6). El detalle exacto queda en el log de PHP o del servidor web: en XAMPP, <code>C:\xampp\php\logs\php_error_log</code> o <code>C:\xampp\apache\logs\error.log</code>; en Linux, <code>/var/log/apache2/error.log</code> o <code>/var/log/nginx/error.log</code>; en Docker, <code>docker compose logs php</code>.</td></tr>
+    <tr><td>Página en blanco, o el navegador descarga el código PHP</td><td>El servidor web no está ejecutando PHP. Verifique que Apache esté iniciado y que la dirección empiece con <code>http://localhost/</code>: abrir el archivo directamente desde la carpeta no ejecuta PHP.</td></tr>
+    <tr><td>«No hay obras disponibles»</td><td>No se importaron los datos de prueba, o se importaron hace semanas y las fechas ya pasaron. Importe <code>database/teatro.sql</code> de nuevo.</td></tr>
+    <tr><td>«Su navegador no está aceptando cookies»</td><td>La compra y la consulta usan una cookie de sesión. Habilite las cookies para el sitio.</td></tr>
+    <tr><td>«Demasiadas compras» o «Demasiadas consultas»</td><td>Es la protección contra compras masivas. Espere (una hora o 15 minutos) o suba el límite (sección 8).</td></tr>
+    <tr><td><code>database/teatro.sql</code> se descarga desde el navegador</td><td>El servidor no aplica el bloqueo. En Apache con <code>AllowOverride None</code>, siga el paso 6 de la sección 5.2; en Nginx, use la configuración de la sección 5.3.</td></tr>
+    <tr><td>Error <code>#1045 Access denied</code> al importar en phpMyAdmin o en la consola</td><td>El usuario <code>root</code> tiene contraseña. En consola, agregue <code>-p</code> y escríbala.</td></tr>
+    <tr><td>La importación falla en <code>CHECK</code> o en <code>utf8mb4</code></td><td>La versión de MySQL o MariaDB es demasiado antigua (sección 2).</td></tr>
+    <tr><td>Docker: «Servicio no disponible» justo después de <code>docker compose up -d</code></td><td>MySQL todavía está importando la base. Espere a que <code>docker compose ps</code> muestre <code>db</code> como «healthy» y recargue.</td></tr>
+    <tr><td>Docker: <code>port is already allocated</code></td><td>El puerto 8080 está ocupado. Ponga otro en <code>.env</code> (<code>TEATRO_PUERTO=8081</code>) y ejecute <code>docker compose up -d</code>.</td></tr>
+    <tr><td>Docker: se cambió <code>TEATRO_DB_PASSWORD</code> después del primer arranque y aparece «Servicio no disponible»</td><td>La clave se fija al crear la base. Vuelva a crearla con <code>docker compose down -v &amp;&amp; docker compose up -d</code> (borra las ventas registradas).</td></tr>
+</table>
+
+<p>Para ver el detalle técnico de un error en pantalla mientras se diagnostica una instalación, agregue <code>'debug' => true,</code> en <code>includes/config.local.php</code>. <b>Quítelo al terminar.</b></p>
+
+<!-- ======================================================================= -->
+<h2>10. Cómo funciona por dentro</h2>
+
+<h3>Recorrido</h3>
+<pre>index.php  ──«Comprar entrada»──▶  comprar.php  ──identificador──▶  confirmacion.php
+(obras disponibles)                (pide el identificador)           (número de entrada)
+
+consultar.php  ──número + identificador──▶  confirmacion.php      (desde cualquier navegador)</pre>
+
+<h3>Base de datos</h3>
+<table>
+    <tr><th style="width:30%">Campo</th><th style="width:34%">Tipo</th><th>Motivo</th></tr>
+    <tr><td><code>OBRA.cod_obra</code></td><td><code>INT UNSIGNED AUTO_INCREMENT</code></td><td>Clave primaria, sin negativos.</td></tr>
+    <tr><td><code>OBRA.nombre</code></td><td><code>VARCHAR(150) NOT NULL</code></td><td>Títulos largos.</td></tr>
+    <tr><td><code>OBRA.fecha_obra</code></td><td><code>DATETIME NOT NULL</code></td><td>Una función tiene fecha <b>y hora</b>: deja de venderse cuando empieza.</td></tr>
+    <tr><td><code>OBRA.aforo</code>, <code>disponibles</code></td><td><code>SMALLINT UNSIGNED NOT NULL</code></td><td>Hasta 65 535 butacas en 2 bytes, sin negativos.</td></tr>
+    <tr><td><code>OBRA.sala</code></td><td><code>VARCHAR(50) NOT NULL</code></td><td>Nombre de la sala.</td></tr>
+    <tr><td><code>VENTAS.numero_venta</code></td><td><code>INT UNSIGNED AUTO_INCREMENT</code></td><td>Número de entrada autoincremental.</td></tr>
+    <tr><td><code>VENTAS.cod_obra</code></td><td><code>INT UNSIGNED</code> + clave foránea</td><td>Toda venta corresponde a una obra existente; no se puede borrar una obra con ventas.</td></tr>
+    <tr><td><code>VENTAS.comprador</code></td><td><code>VARCHAR(20) NOT NULL</code></td><td>Identificador (documento) del comprador.</td></tr>
+    <tr><td><code>VENTAS.fecha_compra</code></td><td><code>DATETIME DEFAULT CURRENT_TIMESTAMP</code></td><td>Momento de la compra.</td></tr>
+</table>
+<p>Además: restricciones <code>CHECK</code> (<code>aforo &gt; 0</code>, <code>disponibles &lt;= aforo</code>, nombre no vacío), índices para la lista de obras y para contar las entradas de cada comprador, motor InnoDB (transacciones) y <code>utf8mb4</code> para acentos y eñes.</p>
+
+<h3>Cómo se registra una venta sin vender de más</h3>
+<p>Todo ocurre dentro de una transacción:</p>
+<pre><span class="c">-- 1. Descontar la entrada solo si todavía hay y la obra no ha empezado.</span>
+UPDATE OBRA SET disponibles = disponibles - 1
+ WHERE cod_obra = ? AND disponibles &gt; 0 AND fecha_obra &gt; NOW();
+
+<span class="c">-- 2. Si no modificó la fila: "Entradas no disponibles" y no se registra nada.</span>
+<span class="c">-- 3. Contar las entradas que ya tiene ese comprador para la obra (máximo 4).</span>
+SELECT COUNT(*) FROM VENTAS WHERE cod_obra = ? AND comprador = ? FOR UPDATE;
+
+<span class="c">-- 4. Registrar la venta y confirmar. LAST_INSERT_ID() es el número de entrada.</span>
+INSERT INTO VENTAS (cod_obra, comprador, fecha_compra) VALUES (?, ?, NOW());
+COMMIT;</pre>
+<p>El <code>UPDATE</code> bloquea la fila de la obra hasta el <code>COMMIT</code>, así que las compras simultáneas de una misma obra se atienden de a una: la última entrada se vende una sola vez y el límite por persona no se puede saltar comprando desde varios navegadores a la vez. Si MySQL aborta la transacción por un bloqueo (mucha carga), la compra se reintenta sola hasta 3 veces; como la transacción fallida se deshace completa, reintentar nunca duplica una venta.</p>
+
+<h3>Seguridad y prevención de errores</h3>
+<table>
+    <tr><th style="width:30%">Riesgo</th><th>Cómo se previene</th></tr>
+    <tr><td>Errores técnicos en pantalla</td><td>Todo error se registra en el log y el usuario ve una página amigable, también si MySQL no responde. Los avisos de PHP se tratan como errores para no seguir en un estado inconsistente.</td></tr>
+    <tr><td>Inyección SQL</td><td>Todas las consultas usan sentencias preparadas (PDO, sin emulación).</td></tr>
+    <tr><td>XSS</td><td>Todo lo que se muestra pasa por <code>htmlspecialchars</code>; además, la política de seguridad de contenido (CSP) prohíbe ejecutar scripts.</td></tr>
+    <tr><td>Compra duplicada (doble clic, F5, Atrás)</td><td>Cada formulario lleva un token de un solo uso; después de comprar se redirige a la confirmación (POST/Redirect/GET).</td></tr>
+    <tr><td>CSRF (compras desde otro sitio)</td><td>El mismo token, más la cookie <code>SameSite=Lax</code>.</td></tr>
+    <tr><td>Bots que compran todas las entradas</td><td>Máximo 4 entradas por identificador y obra (en la misma transacción de la venta), máximo 20 compras por IP en una hora y, en Docker, límite de solicitudes por segundo en Nginx.</td></tr>
+    <tr><td>Ver o adivinar entradas ajenas</td><td>La confirmación solo muestra las ventas de esa sesión. Desde otro navegador se necesitan el número <b>y</b> el identificador, con un máximo de 10 consultas por IP cada 15 minutos.</td></tr>
+    <tr><td>Descarga de archivos internos</td><td>Bloqueo en la configuración del servidor web (sección 5) y, en Apache, también con <code>.htaccess</code>.</td></tr>
+    <tr><td>Robo de la cookie de sesión</td><td>Cookie <code>HttpOnly</code> y <code>SameSite=Lax</code>; <code>Secure</code> cuando el visitante llega por HTTPS, también detrás de un proxy o balanceador.</td></tr>
+    <tr><td>Clickjacking, rastreo de tipos, caché</td><td>Encabezados <code>X-Frame-Options</code>, <code>X-Content-Type-Options</code>, <code>Referrer-Policy</code> y <code>Cache-Control: no-store</code>.</td></tr>
+    <tr><td>Zona horaria</td><td>La regla «fecha mayor que la actual» la evalúa MySQL con <code>NOW()</code>, no PHP.</td></tr>
+</table>
+
+<div class="aviso"><p><b>Alcance de la protección contra bots:</b> los límites frenan a un script que compra desde una misma conexión o con un mismo identificador. Un ataque distribuido (miles de IP e identificadores inventados) solo se detiene verificando la identidad del comprador, con cuentas de usuario, pago o un CAPTCHA, que quedan fuera de lo que pide el enunciado.</p></div>
+
+<!-- ======================================================================= -->
+<h2>11. Lista de comprobación para producción</h2>
+
+<table class="check">
+    <tr><th></th><th>Comprobación</th></tr>
+    <tr><td>☐</td><td>PHP 8.1 o superior con <code>pdo_mysql</code>, y MySQL 8.0.16+ o MariaDB 10.3+ (o Docker).</td></tr>
+    <tr><td>☐</td><td>La aplicación usa un usuario de MySQL con permisos mínimos (<code>teatro_app</code>), no <code>root</code>.</td></tr>
+    <tr><td>☐</td><td>La contraseña de la base es propia (no la del ejemplo) y <code>config.local.php</code> o <code>.env</code> no se puede leer desde el navegador.</td></tr>
+    <tr><td>☐</td><td><code>…/database/teatro.sql</code> responde 403 o 404.</td></tr>
+    <tr><td>☐</td><td><code>debug</code> está desactivado (es el valor por defecto).</td></tr>
+    <tr><td>☐</td><td>El sitio responde por HTTPS con un certificado válido.</td></tr>
+    <tr><td>☐</td><td>Si hay un proxy delante, la aplicación ve la IP real del visitante (Docker lo hace solo; en Apache, <code>mod_remoteip</code>).</td></tr>
+    <tr><td>☐</td><td>Los límites contra compras masivas tienen valores adecuados para el negocio (sección 8).</td></tr>
+    <tr><td>☐</td><td>El cortafuegos solo deja pasar los puertos necesarios (80 y 443, o el de Docker).</td></tr>
+    <tr><td>☐</td><td>Hay un respaldo periódico de la base de datos (por ejemplo, el comando de la sección 4.4 en una tarea programada).</td></tr>
+    <tr><td>☐</td><td>El recorrido de la sección 7.1 funciona de punta a punta en el servidor de producción.</td></tr>
+</table>
+
+</body>
+</html>

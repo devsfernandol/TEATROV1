@@ -19,7 +19,7 @@ return [
     // compras de prueba desde un mismo equipo, suba compras_por_ip.
     // 'limites' => [
     //     'entradas_por_comprador' => 4,   // entradas por persona para cada obra
-    //     'compras_por_ip'         => 10,  // compras por IP en una hora
+    //     'compras_por_ip'         => 20,  // compras por IP en una hora
     //     'consultas_por_ip'       => 10,  // consultas de entradas por IP en 15 minutos
     // ],
 
