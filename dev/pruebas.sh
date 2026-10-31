@@ -147,6 +147,72 @@ curl -s "$BASE/index.php" > "$TMP/index2.html"
 no_contiene "La obra agotada desaparece de la lista" "$TMP/index2.html" "La vida es sueño"
 
 # -----------------------------------------------------------------------------
+echo "Mismo usuario comprando al mismo tiempo"
+VENTAS_ANTES=$(sql 'SELECT COUNT(*) FROM VENTAS')
+DISP_ANTES=$(sql 'SELECT disponibles FROM OBRA WHERE cod_obra = 2')
+
+# Doble clic real: el mismo formulario enviado 10 veces en paralelo.
+CM="$TMP/mismo.txt"
+TM=$(token_de "$CM" 2)
+for i in $(seq 1 10); do
+    curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' -b "$CM" \
+        -d "token=$TM&identificador=V55555555" "$BASE/comprar.php?obra=2" > "$TMP/doble$i.txt" &
+done
+wait
+igual "Mismo formulario enviado 10 veces a la vez: todas llevan a la misma venta" \
+    "$(cat "$TMP"/doble*.txt | sort -u | wc -l | tr -d ' ')" "1"
+igual "Mismo formulario enviado 10 veces a la vez: se registra 1 sola venta" \
+    "$(sql 'SELECT COUNT(*) FROM VENTAS')" "$((VENTAS_ANTES + 1))"
+igual "Mismo formulario enviado 10 veces a la vez: se descuenta 1 sola entrada" \
+    "$(sql 'SELECT disponibles FROM OBRA WHERE cod_obra = 2')" "$((DISP_ANTES - 1))"
+
+# Mismo navegador con dos pestañas: son dos compras distintas e intencionales.
+TA=$(token_de "$CM" 2)
+TB=$(token_de "$CM" 2)
+curl -s -o /dev/null -w '%{redirect_url}\n' -b "$CM" -d "token=$TA&identificador=V55555555" "$BASE/comprar.php?obra=2" > "$TMP/pa.txt" &
+curl -s -o /dev/null -w '%{redirect_url}\n' -b "$CM" -d "token=$TB&identificador=V55555555" "$BASE/comprar.php?obra=2" > "$TMP/pb.txt" &
+wait
+if [[ "$(cat "$TMP/pa.txt")" != "$(cat "$TMP/pb.txt")" ]]; then
+    ok "Dos pestañas a la vez: cada una obtiene su propio número de entrada"
+else
+    falla "Dos pestañas a la vez: cada una obtiene su propio número de entrada" "ambas: $(cat "$TMP/pa.txt")"
+fi
+igual "Dos pestañas a la vez: se registran exactamente 2 ventas más" \
+    "$(sql 'SELECT COUNT(*) FROM VENTAS')" "$((VENTAS_ANTES + 3))"
+
+# Mismo identificador desde 5 navegadores distintos a la vez.
+for i in $(seq 1 5); do token_de "$TMP/n$i.txt" 2 > "$TMP/nt$i.txt"; done
+for i in $(seq 1 5); do
+    curl -s -o /dev/null -w '%{http_code}\n' -b "$TMP/n$i.txt" \
+        -d "token=$(cat "$TMP/nt$i.txt")&identificador=V77777777" "$BASE/comprar.php?obra=2" > "$TMP/nr$i.txt" &
+done
+wait
+igual "Mismo identificador desde 5 navegadores a la vez: 5 compras exitosas" "$(cat "$TMP"/nr*.txt | grep -c '^303$')" "5"
+igual "Mismo identificador desde 5 navegadores a la vez: números de entrada sin repetir" \
+    "$(sql 'SELECT COUNT(DISTINCT numero_venta) = COUNT(*) FROM VENTAS')" "1"
+
+# -----------------------------------------------------------------------------
+echo "Base de datos bloqueada momentáneamente (alta carga)"
+# Se reduce el tiempo de espera de bloqueos a 1 s y otra transacción retiene la
+# fila de la obra durante 2 s: el primer intento expira y la compra debe reintentarse sola.
+CB="$TMP/bloqueo.txt"
+TBQ=$(token_de "$CB" 5)
+sql 'SET GLOBAL innodb_lock_wait_timeout = 1'
+mysql_root TEATRO -e 'START TRANSACTION; SELECT cod_obra FROM OBRA WHERE cod_obra = 5 FOR UPDATE; SELECT SLEEP(2); COMMIT;' >/dev/null &
+BLOQUEO=$!
+sleep 0.3
+igual "La compra se completa pese al bloqueo (reintento automático)" \
+    "$(codigo "$BASE/comprar.php?obra=5" -b "$CB" -d "token=$TBQ&identificador=V88888888")" "303"
+wait "$BLOQUEO"
+sql 'SET GLOBAL innodb_lock_wait_timeout = 50'
+igual "Se registró una sola venta para esa compra" "$(sql "SELECT COUNT(*) FROM VENTAS WHERE comprador = 'V88888888'")" "1"
+if grep -q 'Reintento 1 de la compra por bloqueo' "$PHP_LOG" 2>/dev/null; then
+    ok "El reintento quedó registrado en el log"
+else
+    falla "El reintento quedó registrado en el log" "no se encontró en $PHP_LOG"
+fi
+
+# -----------------------------------------------------------------------------
 echo "Integridad de los datos"
 igual "Para toda obra: disponibles = aforo - ventas" \
     "$(sql 'SELECT COUNT(*) FROM OBRA o WHERE o.disponibles <> o.aforo - (SELECT COUNT(*) FROM VENTAS v WHERE v.cod_obra = o.cod_obra)')" "0"

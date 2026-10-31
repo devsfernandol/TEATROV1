@@ -16,6 +16,11 @@ PHP_LOG="$DEV_DIR/php.log"
 MYSQL_PUERTO="${MYSQL_PUERTO:-3307}"
 PHP_PUERTO="${PHP_PUERTO:-8000}"
 
+# Versión de PHP del entorno: última estable con el parche de PHP2Shell
+# (CVE-2026-109618 y CVE-2026-109619). Se compila con dev/instalar-php.sh.
+PHP_VERSION="8.5.12"
+PHP_BIN="$DEV_DIR/php/bin/php"
+
 # Credenciales que usa la aplicación (solo para este entorno local).
 export TEATRO_DB_HOST=127.0.0.1
 export TEATRO_DB_PORT="$MYSQL_PUERTO"
