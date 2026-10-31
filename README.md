@@ -1,95 +1,263 @@
-# Teatro · Venta de entradas en línea
+<div align="center">
 
-Solución a la prueba técnica de PHP + MySQL. El usuario ve las obras de teatro
-disponibles, elige una, escribe su identificador y recibe su número de entrada.
+# 🎭 Teatro · Venta de entradas en línea
 
-Hecho en **PHP sin frameworks**, **MySQL** y **HTML/CSS**, sin JavaScript. Se
-instala en **Linux con Docker** mediante un instalador con menú.
+**Prueba técnica PHP + MySQL**: el usuario ve las obras disponibles, elige una,
+escribe su identificador y recibe su número de entrada.
 
-- Instrucciones de la entrega: [LEAME.md](LEAME.md)
-- Guía paso a paso: [GUIA-INSTALACION.pdf](GUIA-INSTALACION.pdf)
+![PHP](https://img.shields.io/badge/PHP-8.1%2B%20·%208.5-777BB4?logo=php&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8.4-4479A1?logo=mysql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose%20v2-2496ED?logo=docker&logoColor=white)
+![Nginx](https://img.shields.io/badge/Nginx-1.28-009639?logo=nginx&logoColor=white)
+![Sin JavaScript](https://img.shields.io/badge/JavaScript-0%20líneas-lightgrey)
+![Pruebas](https://img.shields.io/badge/pruebas-281%20superadas-success)
 
-## Instalación
+[**Instalación**](#instalacion) ·
+[**Cómo probarlo**](#probar) ·
+[**Pruebas automáticas**](#pruebas) ·
+[**Cómo funciona**](#funcionamiento) ·
+[LEAME](LEAME.md) ·
+[Guía PDF](GUIA-INSTALACION.pdf)
+
+</div>
+
+---
+
+## ✨ Qué hace
+
+| | |
+|---|---|
+| 📋 **Cartelera** | Lista las obras con entradas disponibles y fecha futura (`index.php`). |
+| 🎟️ **Compra** | Pide el identificador, registra la venta y muestra el **número de entrada autoincremental**. |
+| 🔒 **Sin sobreventa** | La venta y el descuento de `disponibles` ocurren en **una sola transacción**, también con compras simultáneas. |
+| 🔎 **Consultar mi entrada** | Recupera la entrada desde cualquier navegador con su número y el identificador. |
+| 🛡️ **Listo para producción** | Instalador con menú, contenedores endurecidos, sin claves por defecto y sin errores técnicos en pantalla. |
+
+Hecho en **PHP sin frameworks**, **MySQL** y **HTML/CSS**, sin JavaScript.
+
+---
+
+<a id="instalacion"></a>
+
+## 🚀 Instalación en 1 minuto
+
+> **Requisitos:** Linux con Docker Engine 24+ y Docker Compose v2. Si falta
+> Docker, el instalador ofrece instalarlo.
 
 ```bash
-unzip teatro-v1.3.zip && cd teatro      # o: git clone ... && cd teatro
+git clone https://github.com/devsfernandol/TEATROV1.git
+cd TEATROV1
 sudo ./instalar.sh
 ```
 
+El instalador muestra un menú:
+
 ```
+Teatro · Instalación con Docker
+
   1) Instalar con un MySQL nuevo, en Docker (recomendado: no necesita nada más)
   2) Instalar usando un MySQL que ya existe (pide sus credenciales)
   3) Ver el estado
   4) Desinstalar
   0) Salir
+Opción [1]:
 ```
 
-- **Opción 1.** Levanta Nginx, PHP 8.5 y MySQL 8.4. La base se importa sola y
-  el usuario `teatro_app` recibe una clave aleatoria.
-- **Opción 2.** Se conecta a un MySQL existente y se adapta a dónde está:
-  - en el mismo servidor, por su socket, sin abrirlo a la red;
-  - en otro servidor, por IP y puerto.
+<table>
+<tr><th width="50%">1️⃣ MySQL nuevo en Docker</th><th>2️⃣ MySQL que ya existe</th></tr>
+<tr valign="top"><td>
 
-  Importa la base `TEATRO` (o conserva la que ya tenga) y crea `teatro_app` con
-  permisos mínimos. Las credenciales de administrador no se guardan.
+- Pregunta el **puerto** y la **zona horaria**. Basta con pulsar Enter.
+- Levanta **Nginx + PHP 8.5 + MySQL 8.4**.
+- Importa la base `TEATRO` sola.
+- Crea el usuario `teatro_app` con una **clave aleatoria**.
 
-## Qué pide la prueba y dónde está
+</td><td>
 
-| Lo que pide el enunciado | Dónde está |
-|---|---|
-| Base `TEATRO` con `OBRA` y `VENTAS` | `database/teatro.sql` (también es el respaldo) |
-| Página `index` con las obras con entradas y fecha futura | `index.php` |
-| Pedir el identificador y registrar la venta con número autoincremental | `comprar.php` → `confirmacion.php` |
-| Restar 1 a `disponibles` | `includes/obras.php`, en la misma transacción que la venta |
-| Archivo LEAME | `LEAME.md` |
-| Producción sin errores | `instalar.sh` + Docker y [pruebas automáticas](#pruebas-automáticas) |
+- **En este servidor:** se conecta por el socket, sin abrir MySQL a la red.
+- **En otro servidor:** pide la IP y el puerto.
+- Pide un usuario administrador, por ejemplo `root`. **Esa clave no se guarda.**
+- Importa la base `TEATRO` o conserva la que ya existe.
+- Crea `teatro_app` con **permisos mínimos**.
+
+</td></tr>
+</table>
+
+Al terminar, comprueba que la aplicación responde y muestra la dirección:
 
 ```
-index.php  ──"Comprar entrada"──▶  comprar.php  ──identificador──▶  confirmacion.php
-consultar.php  ──número + identificador──▶  confirmacion.php   (desde otro navegador)
+✓ Teatro está funcionando (MySQL en Docker).
+
+   Dirección:      http://203.0.113.10:8080/
+   Configuración:  .env (permisos 600, contiene las claves)
+   Estado y logs:  docker compose ps · docker compose logs php
+   Este menú:      ./instalar.sh
 ```
 
-## Desarrollo
+> 💡 **Volver a ejecutarlo** actualiza la instalación y **conserva los datos**,
+> salvo que elija empezar de cero. Para HTTPS, responda `127.0.0.1:8080` como
+> puerto y ponga un proxy (Caddy, Nginx) delante. Está detallado en el
+> [LEAME](LEAME.md#https-opcional).
 
-La carpeta `dev/` tiene un entorno para **Linux o WSL** con su propio PHP
-8.5.12 y su propio MySQL en `.dev/`, sin `sudo`. No va en el paquete de entrega.
+---
+
+<a id="probar"></a>
+
+## 🧪 Cómo probarlo
+
+### Datos de prueba
+
+| Cód. | Obra | Disponibles | ¿Aparece? |
+|:-:|---|:-:|---|
+| 1 | La casa de Bernarda Alba | 120 / 120 | ✅ |
+| 2 | Bodas de sangre | 78 / 80 | ✅ |
+| 3 | La vida es sueño | **2 / 5** | ✅ hasta que se vendan las 2 |
+| 4 | Don Juan Tenorio | 200 / 200 | ✅ |
+| 5 | El sí de las niñas | 60 / 60 | ✅ |
+| 6 | Luces de bohemia | **0 / 3** | ❌ agotada |
+| 7 | Fuenteovejuna | 48 / 50 | ❌ su fecha ya pasó |
+
+Las fechas se calculan al importar la base, así que siempre hay obras futuras.
+Hay 10 ventas previas: **la primera compra genera la entrada 11**.
+
+### Recorrido en 2 minutos
+
+- [ ] Abrir la dirección: aparecen **5 obras**, sin la agotada ni la pasada.
+- [ ] *La vida es sueño* → **Comprar entrada** → `V-12345678`: **«¡Compra realizada con éxito!», entrada 11**.
+- [ ] Comprar la última entrada de esa obra: entrada 12, y la obra **desaparece de la cartelera**.
+- [ ] En una ventana privada, abrir `/confirmacion.php?venta=11`: **«Entrada no encontrada»**.
+- [ ] Ahí mismo, **Consultar mi entrada** con `11` + `V-12345678`: se muestra la entrada.
+- [ ] Revisar la base:
 
 ```bash
-sudo apt install build-essential libssl-dev zlib1g-dev mysql-server curl python3   # una vez
-dev/iniciar.sh            # http://localhost:8000 · MySQL en 127.0.0.1:3307
-dev/detener.sh            # detiene MySQL (los datos se conservan)
+sudo docker compose exec db sh -c 'mysql -uteatro_app -p"$TEATRO_DB_PASSWORD" TEATRO'
+```
+```sql
+SELECT * FROM VENTAS ORDER BY numero_venta DESC LIMIT 1;  -- venta 11, obra 3, V-12345678
+SELECT disponibles FROM OBRA WHERE cod_obra = 3;          -- bajó de 2 a 1
 ```
 
-### Pruebas automáticas
+### Errores controlados
 
-| Script | Qué comprueba |
+| Prueba | Resultado esperado |
 |---|---|
-| `dev/pruebas.sh` | **131 pruebas** de punta a punta: lista de obras, compra, validación, seguridad (CSRF, XSS, inyección SQL, cabeceras, cookie), doble envío, consultar entrada, concurrencia (20 compras simultáneas por 2 entradas), bloqueos de MySQL, integridad y log sin errores. |
-| `dev/prueba-instalacion.sh` | **96 comprobaciones**: genera el ZIP, revisa que tenga lo necesario y nada más, lo instala en una carpeta limpia, importa la base dos veces, ejecuta las 131 pruebas sobre esa copia y prueba los límites por IP, la conexión por socket y que con MySQL caído no se vea ningún error técnico. Con `PHP_BIN=/usr/bin/php` prueba con otro PHP (8.1). |
-| `dev/prueba-docker.sh usuario@servidor` | **54 comprobaciones** del instalador en un Linux con Docker real: los tres modos (Docker, socket y red), una clave incorrecta, actualizar conservando datos, empezar de cero, MySQL caído, archivos internos con 404, permisos de `.env` y desinstalar. Usa un proyecto y un puerto propios, sin tocar otras instalaciones. |
+| Identificador vacío, `ab`, `<script>` o `1' OR '1'='1` | Mensaje claro, sin venta y sin ejecutar nada |
+| F5 en la confirmación o doble clic en «Comprar» | **Una sola** venta |
+| 5.ª entrada de la misma obra con el mismo identificador | «Máximo de 4 entradas permitidas para esta obra» |
+| Más de 20 compras por hora desde la misma IP | «Demasiadas compras» |
+| `comprar.php?obra=6`, `=7`, `=999` o `=abc` | «Obra no disponible» |
+| `/database/teatro.sql`, `/.env`, `/includes/config.php` | **404** |
+| `sudo docker compose stop db` y recargar | «Servicio no disponible», sin detalles técnicos |
 
-`dev/prueba-instalacion.sh` y `dev/prueba-docker.sh` usan el **último commit**.
+---
+
+<a id="pruebas"></a>
+
+## ✅ Pruebas automáticas
+
+**281 comprobaciones**, todas superadas con PHP 8.1 y PHP 8.5:
+
+| Suite | Comprobaciones | Qué cubre |
+|---|:-:|---|
+| [`dev/pruebas.sh`](dev/pruebas.sh) | **131** | Cartelera, compra, validación, CSRF, XSS, inyección SQL, cabeceras y cookie, doble envío, consultar entrada, **concurrencia**, bloqueos de MySQL e integridad de datos |
+| [`dev/prueba-instalacion.sh`](dev/prueba-instalacion.sh) | **96** | Contenido del ZIP, instalación en una carpeta limpia, importar la base dos veces, esquema según el enunciado, límites por IP, conexión por socket, MySQL caído o con la clave incorrecta |
+| [`dev/prueba-docker.sh`](dev/prueba-docker.sh) | **54** | El instalador en un **servidor real con Docker**: los 3 modos (Docker, socket y red), clave incorrecta, actualizar, empezar de cero, archivos internos con 404, permisos de `.env` y desinstalar |
+
+### Escenarios de concurrencia probados
+
+| Escenario | Resultado |
+|---|---|
+| 🏃 20 personas compran **a la vez** las 2 últimas entradas | Exactamente **2 ventas**; nunca se supera el aforo |
+| 🖱️ El mismo formulario enviado 10 veces a la vez | **1 venta** |
+| 👥 El mismo identificador desde 5 navegadores a la vez | Exactamente **4 ventas** (el máximo por persona) |
+| 🔒 MySQL bloqueado por otra transacción | La compra se reintenta sola, **sin duplicarse** |
+| 💥 MySQL caído | Página amigable; el detalle va al log, **sin contraseñas** |
+
+<details>
+<summary><b>Ejecutar las pruebas</b> (Linux o WSL)</summary>
+
+<br>
+
+El entorno de `dev/` usa su propio PHP 8.5.12 y su propio MySQL en `.dev/`,
+sin `sudo` y sin tocar los del sistema.
+
+```bash
+sudo apt install build-essential libssl-dev zlib1g-dev mysql-server curl python3   # una sola vez
+
+dev/iniciar.sh                         # app en http://localhost:8000 (otra terminal)
+dev/pruebas.sh                         # ✓ 131 pruebas correctas
+dev/prueba-instalacion.sh              # ✓ 96 comprobaciones correctas
+PHP_BIN=/usr/bin/php dev/prueba-instalacion.sh   # lo mismo con otro PHP (8.1)
+dev/prueba-docker.sh usuario@servidor  # ✓ 54 comprobaciones, en un Linux con Docker
+```
 
 | Otros scripts | |
 |---|---|
 | `dev/reiniciar-bd.sh` | Restaura la base desde `database/teatro.sql` |
-| `dev/empaquetar.sh [ref]` | Genera `dist/teatro.zip` (la entrega) |
-| `dev/generar-guia.sh` | Regenera `GUIA-INSTALACION.pdf` desde `dev/guia/guia.html` |
+| `dev/empaquetar.sh` | Genera el ZIP de entrega en `dist/` |
+| `dev/generar-guia.sh` | Regenera `GUIA-INSTALACION.pdf` |
 
-`deploy/` es el despliegue de la demo en línea del autor, detrás de un túnel de
-Cloudflare; tampoco va en la entrega.
+</details>
 
-## Estructura
+---
+
+<a id="funcionamiento"></a>
+
+## ⚙️ Cómo funciona
+
+```mermaid
+flowchart LR
+    U([👤 Visitante]) -->|:8080| W[Nginx<br/>4 páginas + CSS]
+    W --> P[PHP 8.5-FPM<br/>solo lectura]
+    P -->|red interna| D[(MySQL 8.4<br/>sin puertos)]
+    P -.->|opción 2| E[(MySQL existente)]
+```
+
+### Una venta, sin vender de más
+
+```sql
+START TRANSACTION;
+UPDATE OBRA SET disponibles = disponibles - 1
+ WHERE cod_obra = ? AND disponibles > 0 AND fecha_obra > NOW();     -- 0 filas = agotada
+SELECT COUNT(*) FROM VENTAS WHERE cod_obra = ? AND comprador = ? FOR UPDATE;  -- máximo 4
+INSERT INTO VENTAS (cod_obra, comprador, fecha_compra) VALUES (?, ?, NOW());
+COMMIT;                                                              -- LAST_INSERT_ID() = n.º de entrada
+```
+
+El `UPDATE` bloquea la fila de la obra hasta el `COMMIT`, así que las compras
+simultáneas se atienden de a una.
+
+### Seguridad
+
+| Riesgo | Protección |
+|---|---|
+| Inyección SQL / XSS | Sentencias preparadas · escape de toda la salida · CSP `script-src 'none'` |
+| Compras duplicadas / CSRF | Token de un solo uso · POST/Redirect/GET · cookie `SameSite=Lax` |
+| Bots | Límite por persona y obra, por IP y por segundo (Nginx) |
+| Entradas ajenas | Solo las de la sesión, o con número **y** identificador |
+| Archivos y claves | Nginx solo publica 4 páginas · `.env` con permisos 600 · **sin claves por defecto** |
+| Base de datos | Usuario con permisos mínimos · red interna sin puertos · root con clave aleatoria |
+| Contenedores | Sistema de archivos de solo lectura · `no-new-privileges` |
+
+---
+
+## 📁 Estructura
 
 ```
-├── index.php, comprar.php, confirmacion.php, consultar.php   Páginas
-├── includes/            Configuración, conexión, consultas, sesión, límites, plantillas
+├── index.php · comprar.php · confirmacion.php · consultar.php   Páginas
+├── includes/            Conexión, consultas, sesión, límites y plantillas
 ├── assets/css/          Estilos
-├── database/teatro.sql  Esquema y datos de prueba
+├── database/teatro.sql  Esquema TEATRO + datos de prueba (respaldo)
 ├── instalar.sh          Instalador con menú
-├── docker-compose.yml   Nginx + PHP
-├── docker/              mysql-docker.yml, mysql-socket.yml, Nginx, PHP y ayudante del instalador
-├── LEAME.md, GUIA-INSTALACION.pdf
-├── dev/                 Entorno de desarrollo, pruebas y guía (no va en la entrega)
-└── deploy/              Demo en línea del autor (no va en la entrega)
+├── docker-compose.yml   Nginx + PHP · docker/mysql-*.yml agrega el modo de MySQL
+├── docker/              Configuración de producción de Nginx, PHP y MySQL
+├── LEAME.md · GUIA-INSTALACION.pdf
+├── dev/                 Entorno de desarrollo y pruebas (no va en la entrega)
+└── deploy/              Despliegue de la demo del autor (no va en la entrega)
 ```
+
+<div align="center">
+
+Hecho por **Fernando** · [devsfernandol](https://github.com/devsfernandol)
+
+</div>
