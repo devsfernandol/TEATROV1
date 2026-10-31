@@ -8,6 +8,8 @@ set -uo pipefail
 source "$(dirname "$0")/entorno.sh"
 
 BASE="${1:-http://localhost:$PHP_PUERTO}"
+# Log de PHP a revisar (dev/prueba-instalacion.sh lo cambia para su servidor).
+PHP_LOG="${PRUEBAS_PHP_LOG:-$PHP_LOG}"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -58,6 +60,31 @@ igual "Muestra las 5 obras disponibles" "$(grep -c 'class="tarjeta obra"' "$TMP/
 no_contiene "No muestra la obra agotada (Luces de bohemia)" "$TMP/index.html" "Luces de bohemia"
 no_contiene "No muestra la obra con fecha pasada (Fuenteovejuna)" "$TMP/index.html" "Fuenteovejuna"
 contiene "Enlaza a la compra de cada obra" "$TMP/index.html" 'comprar.php?obra=1'
+igual "Las obras se ordenan por fecha (primera: la más próxima)" \
+    "$(grep -oE 'obra__nombre">[^<]+' "$TMP/index.html" | head -1 | cut -d'>' -f2)" "La casa de Bernarda Alba"
+contiene "Muestra las entradas disponibles de cada obra" "$TMP/index.html" "<dd>78 de 80</dd>"
+contiene "Muestra la sala" "$TMP/index.html" "Sala Lorca"
+contiene "Muestra la fecha en español" "$TMP/index.html" " h</time>"
+contiene "Los acentos se muestran correctamente (UTF-8)" "$TMP/index.html" "El sí de las niñas"
+
+# -----------------------------------------------------------------------------
+echo "Seguridad: cabeceras HTTP y cookie de sesión"
+curl -s -D "$TMP/cabeceras.txt" -o /dev/null "$BASE/index.php"
+contiene "Content-Type HTML en UTF-8" "$TMP/cabeceras.txt" "Content-Type: text/html; charset=utf-8"
+contiene "Content-Security-Policy restrictiva" "$TMP/cabeceras.txt" "Content-Security-Policy: default-src 'self'"
+contiene "X-Frame-Options: DENY (anti clickjacking)" "$TMP/cabeceras.txt" "X-Frame-Options: DENY"
+contiene "X-Content-Type-Options: nosniff" "$TMP/cabeceras.txt" "X-Content-Type-Options: nosniff"
+contiene "Sin caché (la disponibilidad cambia en tiempo real)" "$TMP/cabeceras.txt" "Cache-Control: no-store"
+contiene "Cookie de sesión HttpOnly" "$TMP/cabeceras.txt" "HttpOnly"
+contiene "Cookie de sesión SameSite=Lax" "$TMP/cabeceras.txt" "SameSite=Lax"
+no_contiene "No expone la versión de PHP (X-Powered-By)" "$TMP/cabeceras.txt" "X-Powered-By: PHP"
+for pagina in index.php "comprar.php?obra=1" "comprar.php?obra=999"; do
+    curl -s "$BASE/$pagina" > "$TMP/pagina.html"
+    contiene "$pagina: HTML en español con charset UTF-8" "$TMP/pagina.html" '<html lang="es">'
+    contiene "$pagina: carga la hoja de estilos" "$TMP/pagina.html" 'assets/css/estilos.css'
+done
+igual "La hoja de estilos se sirve (200)" "$(codigo "$BASE/assets/css/estilos.css")" "200"
+igual "El JavaScript se sirve (200)" "$(codigo "$BASE/assets/js/app.js")" "200"
 
 # -----------------------------------------------------------------------------
 echo "Parámetros inválidos y URLs inesperadas"
@@ -81,7 +108,19 @@ curl -s -c "$C" -b "$C" --data-urlencode "token=$T" --data-urlencode 'identifica
     "$BASE/comprar.php?obra=1" > "$TMP/xss.html"
 no_contiene "El valor ingresado se escapa (sin XSS)" "$TMP/xss.html" "<script>alert(1)"
 contiene "El valor ingresado se conserva escapado" "$TMP/xss.html" "&lt;script&gt;"
+LARGO=$(head -c 20000 /dev/zero | tr '\0' 'A')
+igual "Identificador de 20 000 caracteres responde 422 (sin caerse)" \
+    "$(codigo "$BASE/comprar.php?obra=1" -c "$C" -b "$C" -d "token=$T&identificador=$LARGO")" "422"
+igual "Bytes no UTF-8 en el identificador responden 422" \
+    "$(codigo "$BASE/comprar.php?obra=1" -c "$C" -b "$C" -d "token=$T&identificador=%FF%FE%00abc")" "422"
+igual "Identificador enviado como arreglo responde 422" \
+    "$(codigo "$BASE/comprar.php?obra=1" -c "$C" -b "$C" -d "token=$T&identificador[]=V12345678")" "422"
+igual "Inyección SQL en el identificador responde 422" \
+    "$(codigo "$BASE/comprar.php?obra=1" -c "$C" -b "$C" --data-urlencode "token=$T" --data-urlencode "identificador=1' OR '1'='1")" "422"
+igual "Token enviado como arreglo responde 400" \
+    "$(codigo "$BASE/comprar.php?obra=1" -c "$C" -b "$C" -d "token[]=$T&identificador=V12345678")" "400"
 igual "Ninguna venta registrada por entradas inválidas" "$(sql 'SELECT COUNT(*) FROM VENTAS')" "10"
+igual "Las tablas siguen intactas" "$(sql 'SELECT COUNT(*) FROM OBRA')" "7"
 
 # -----------------------------------------------------------------------------
 echo "Token del formulario (CSRF) y cookies"
@@ -119,6 +158,18 @@ igual "Reenviar no genera otra venta" "$(sql 'SELECT COUNT(*) FROM VENTAS')" "11
 igual "Reenviar no descuenta otra entrada" "$(sql 'SELECT disponibles FROM OBRA WHERE cod_obra = 1')" "$((DISP_ANTES - 1))"
 igual "Otra sesión no puede ver la entrada 11" "$(codigo "$BASE/confirmacion.php?venta=11")" "404"
 igual "No se pueden ver entradas ajenas (venta 1)" "$(codigo "$BASE/confirmacion.php?venta=1" -b "$C")" "404"
+
+# -----------------------------------------------------------------------------
+echo "Identificadores válidos en los límites"
+for valido in "ABCDE" "A1234567890123456789" "e-12345678" "  p 1234.567  "; do
+    CV="$TMP/valido.txt"
+    TV=$(token_de "$CV" 5)
+    igual "Identificador '$valido' se acepta" \
+        "$(codigo "$BASE/comprar.php?obra=5" -c "$CV" -b "$CV" --data-urlencode "token=$TV" --data-urlencode "identificador=$valido")" "303"
+done
+igual "Se guardan normalizados (mayúsculas, sin espacios ni puntos)" \
+    "$(sql "SELECT GROUP_CONCAT(comprador ORDER BY numero_venta SEPARATOR ',') FROM VENTAS WHERE cod_obra = 5")" \
+    "ABCDE,A1234567890123456789,E-12345678,P1234567"
 
 # -----------------------------------------------------------------------------
 echo "Obra que deja de estar disponible mientras se compra"
