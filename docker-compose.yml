@@ -1,8 +1,12 @@
-# Teatro en producción con Docker: Nginx + PHP-FPM + MySQL.
+# Teatro en producción con Docker: Nginx + PHP-FPM, más MySQL según el modo.
 #
-#   docker compose up -d        → http://IP_DEL_SERVIDOR:8080
+# Se instala con ./instalar.sh, que escribe el archivo .env. Este elige, con
+# COMPOSE_FILE, cómo se conecta la aplicación a MySQL:
+#   docker/mysql-docker.yml   MySQL nuevo en un contenedor (opción 1 del menú)
+#   docker/mysql-socket.yml   MySQL instalado en este mismo servidor (opción 2)
+#   (solo este archivo)       MySQL en otro servidor, por red (opción 2)
 #
-# Configuración opcional en un archivo .env junto a este (ver .env.example y LEAME, sección 3).
+# Después de instalar funcionan los comandos habituales: docker compose ps, logs, restart...
 
 name: teatro
 
@@ -33,61 +37,27 @@ services:
     image: teatro-php
     restart: unless-stopped
     environment:
-      TEATRO_DB_HOST: db
-      TEATRO_DB_PORT: 3306
+      TEATRO_DB_HOST: ${TEATRO_DB_HOST:-db}
+      TEATRO_DB_PORT: ${TEATRO_DB_PORT:-3306}
+      TEATRO_DB_SOCKET: ${TEATRO_DB_SOCKET:-}
       TEATRO_DB_NAME: TEATRO
-      TEATRO_DB_USER: teatro_app
-      TEATRO_DB_PASSWORD: ${TEATRO_DB_PASSWORD:-Teatro.App-2026}
+      TEATRO_DB_USER: ${TEATRO_DB_USER:-teatro_app}
+      TEATRO_DB_PASSWORD: ${TEATRO_DB_PASSWORD:?Falta la configuración. Ejecute ./instalar.sh}
       TEATRO_LIMITE_ENTRADAS_COMPRADOR: ${TEATRO_LIMITE_ENTRADAS_COMPRADOR:-4}
       TEATRO_LIMITE_COMPRAS_IP: ${TEATRO_LIMITE_COMPRAS_IP:-20}
       TEATRO_LIMITE_CONSULTAS_IP: ${TEATRO_LIMITE_CONSULTAS_IP:-10}
+    # Permite llegar a un MySQL publicado en este mismo servidor (host.docker.internal).
+    extra_hosts:
+      - host.docker.internal:host-gateway
     volumes:
       - ./:/var/www/teatro:ro
-    depends_on:
-      db:
-        condition: service_healthy
     networks:
       - frontal
-      - datos
     read_only: true
     tmpfs:
       - /tmp
     security_opt:
       - no-new-privileges:true
 
-  db:
-    image: mysql:8.4
-    restart: unless-stopped
-    command:
-      - --default-time-zone=${TEATRO_ZONA_HORARIA:--06:00}
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
-    environment:
-      # La aplicación no usa root: se genera una clave aleatoria que nadie necesita.
-      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
-      TEATRO_DB_PASSWORD: ${TEATRO_DB_PASSWORD:-Teatro.App-2026}
-    volumes:
-      - datos-mysql:/var/lib/mysql
-      # Solo se ejecutan la primera vez, al crear el volumen de datos.
-      - ./database/teatro.sql:/docker-entrypoint-initdb.d/01-teatro.sql:ro
-      - ./docker/db-init/02-usuario.sh:/docker-entrypoint-initdb.d/02-usuario.sh:ro
-    networks:
-      - datos
-    healthcheck:
-      # mysqladmin ping responde 0 en cuanto el servidor acepta conexiones por TCP,
-      # es decir, cuando ya terminó de importar la base.
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
-      interval: 5s
-      timeout: 5s
-      retries: 60
-    security_opt:
-      - no-new-privileges:true
-
 networks:
   frontal: {}
-  # La base de datos solo es accesible desde PHP: sin salida a internet ni puertos publicados.
-  datos:
-    internal: true
-
-volumes:
-  datos-mysql: {}

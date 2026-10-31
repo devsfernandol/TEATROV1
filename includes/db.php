@@ -11,12 +11,10 @@ function db(): PDO
 
     if ($pdo === null) {
         $cfg = config()['db'];
-        $dsn = sprintf(
-            'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
-            $cfg['host'],
-            $cfg['port'],
-            $cfg['name']
-        );
+        $servidor = ($cfg['socket'] ?? '') !== ''
+            ? sprintf('unix_socket=%s', $cfg['socket'])
+            : sprintf('host=%s;port=%d', $cfg['host'], $cfg['port']);
+        $dsn = sprintf('mysql:%s;dbname=%s;charset=utf8mb4', $servidor, $cfg['name']);
 
         $pdo = new PDO($dsn, $cfg['user'], $cfg['password'], [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,

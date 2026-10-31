@@ -7,7 +7,8 @@ declare(strict_types=1);
  *
  * Los valores se toman, en este orden de prioridad, de:
  *   1. includes/config.local.php (opcional, no versionado), que debe retornar un arreglo.
- *   2. Variables de entorno (TEATRO_DB_HOST, TEATRO_DB_PORT, ...).
+ *   2. Variables de entorno (TEATRO_DB_HOST, TEATRO_DB_PORT, ...), que en Docker
+ *      escribe ./instalar.sh en el archivo .env.
  *   3. Los valores por defecto de este archivo.
  */
 
@@ -22,6 +23,8 @@ $config = [
     'db' => [
         'host'     => getenv('TEATRO_DB_HOST') ?: 'localhost',
         'port'     => (int) (getenv('TEATRO_DB_PORT') ?: 3306),
+        // Socket de MySQL (opcional). Si se indica, se usa en lugar de host y puerto.
+        'socket'   => getenv('TEATRO_DB_SOCKET') ?: '',
         'name'     => getenv('TEATRO_DB_NAME') ?: 'TEATRO',
         'user'     => getenv('TEATRO_DB_USER') ?: 'root',
         'password' => getenv('TEATRO_DB_PASSWORD') ?: '',

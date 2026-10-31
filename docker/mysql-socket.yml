@@ -1,0 +1,9 @@
+# Modo "MySQL instalado en este servidor": PHP se conecta por el socket de MySQL,
+# sin abrirlo a la red ni cambiar su configuración (bind-address).
+
+services:
+  php:
+    environment:
+      TEATRO_DB_SOCKET: /run/mysqld-servidor/${TEATRO_DB_SOCKET_ARCHIVO:-mysqld.sock}
+    volumes:
+      - ${TEATRO_DB_SOCKET_DIR:?Falta la configuración. Ejecute ./instalar.sh}:/run/mysqld-servidor:ro

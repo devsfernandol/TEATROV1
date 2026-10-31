@@ -66,7 +66,8 @@ python3 -I -c 'import sys, zipfile; print("\n".join(zipfile.ZipFile(sys.argv[1])
 
 for requerido in teatro/index.php teatro/comprar.php teatro/confirmacion.php teatro/consultar.php teatro/includes/limites.php \
                 teatro/LEAME.md teatro/GUIA-INSTALACION.pdf teatro/database/teatro.sql \
-                teatro/docker-compose.yml teatro/.env.example teatro/docker/Dockerfile teatro/docker/php-fpm.conf \
+                teatro/instalar.sh teatro/docker-compose.yml teatro/.env.example teatro/docker/mysql-docker.yml \
+                teatro/docker/mysql-socket.yml teatro/docker/instalar-bd.php teatro/docker/Dockerfile teatro/docker/php-fpm.conf \
                 teatro/docker/nginx.conf teatro/docker/fastcgi.conf teatro/docker/php.ini \
                 teatro/docker/db-init/02-usuario.sh teatro/docker/demasiadas-solicitudes.html; do
     contiene "Incluye $requerido" "$TMP/contenido.txt" "$requerido"
@@ -200,23 +201,30 @@ comprobar_fallo "$PUERTO_CLAVE_MALA" "$TMP/php-clave.log" "Credenciales incorrec
 
 # -----------------------------------------------------------------------------
 echo
-echo "Configuración documentada en el LEAME (includes/config.local.php)"
-# Se sigue el paso 3 del LEAME al pie de la letra: copiar el ejemplo y editarlo.
+echo "Otras formas de configurar la conexión"
+# Por socket, como en el modo "MySQL de este servidor" del instalador (root del MySQL de desarrollo).
+servir 8008 "$TMP/php-socket.log" TEATRO_DB_SOCKET="$MYSQL_SOCKET" TEATRO_DB_USER=root TEATRO_DB_PASSWORD= \
+    TEATRO_DB_HOST=host-que-no-existe
+curl -s -o "$TMP/socket.html" -w '%{http_code}' "http://localhost:8008/teatro/" > "$TMP/socket.code"
+igual "Con TEATRO_DB_SOCKET conecta por el socket (e ignora el host)" "$(cat "$TMP/socket.code")" "200"
+igual "y muestra las 5 obras" "$(grep -c 'class="tarjeta obra"' "$TMP/socket.html")" "5"
+
+# includes/config.local.php tiene prioridad sobre las variables de entorno.
 CONFIG_LOCAL="$TMP/www/teatro/includes/config.local.php"
-cp "$TMP/www/teatro/includes/config.local.example.php" "$CONFIG_LOCAL"
-sed -i "s/'host'     => 'localhost'/'host'     => '$TEATRO_DB_HOST'/; s/'port'     => 3306/'port'     => $TEATRO_DB_PORT/; \
-        s/'user'     => 'root'/'user'     => '$TEATRO_DB_USER'/; s/'password' => ''/'password' => '$TEATRO_DB_PASSWORD'/" "$CONFIG_LOCAL"
-servir 8004 "$TMP/php-config.log"
+cat > "$CONFIG_LOCAL" <<PHP
+<?php
+return ['db' => ['host' => '$TEATRO_DB_HOST', 'port' => $TEATRO_DB_PORT, 'user' => '$TEATRO_DB_USER', 'password' => '$TEATRO_DB_PASSWORD']];
+PHP
+servir 8004 "$TMP/php-config.log" TEATRO_DB_PASSWORD=clave_incorrecta
 curl -s -o "$TMP/config.html" -w '%{http_code}' "http://localhost:8004/teatro/" > "$TMP/config.code"
-igual "Con credenciales en config.local.php la aplicación conecta" "$(cat "$TMP/config.code")" "200"
+igual "Con credenciales en config.local.php conecta aunque el entorno tenga otra clave" "$(cat "$TMP/config.code")" "200"
 igual "y muestra las 5 obras" "$(grep -c 'class="tarjeta obra"' "$TMP/config.html")" "5"
 
-# Modo de diagnóstico: se activa la línea 'debug' del ejemplo y se apunta a un puerto sin MySQL.
-sed -i "s|// 'debug' => true,|'debug' => true,|; s/'port'     => $TEATRO_DB_PORT/'port'     => 3999/" "$CONFIG_LOCAL"
-servir 8005 "$TMP/php-debug.log"
-curl -s -o "$TMP/debug.html" "http://localhost:8005/teatro/"
-contiene "Con 'debug' => true se muestra el detalle técnico del error" "$TMP/debug.html" "SQLSTATE"
+# Modo de diagnóstico, apuntando a un puerto sin MySQL.
+servir 8005 "$TMP/php-debug.log" TEATRO_DEBUG=1 TEATRO_DB_PORT=3999
 rm -f "$CONFIG_LOCAL"
+curl -s -o "$TMP/debug.html" "http://localhost:8005/teatro/"
+contiene "Con TEATRO_DEBUG=1 se muestra el detalle técnico del error" "$TMP/debug.html" "SQLSTATE"
 
 "$(dirname "$0")/reiniciar-bd.sh" >/dev/null
 

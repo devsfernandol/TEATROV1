@@ -1,0 +1,46 @@
+# Modo "MySQL nuevo en Docker": agrega un MySQL 8.4 propio de la aplicación.
+# La base se importa sola la primera vez, al crear el volumen de datos.
+
+services:
+  php:
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - datos
+
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    command:
+      - --default-time-zone=${TEATRO_ZONA_HORARIA:--06:00}
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      # La aplicación no usa root: se genera una clave aleatoria que nadie necesita.
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      TEATRO_DB_PASSWORD: ${TEATRO_DB_PASSWORD:?Falta la configuración. Ejecute ./instalar.sh}
+    volumes:
+      - datos-mysql:/var/lib/mysql
+      # Las rutas son relativas a docker-compose.yml (la carpeta del proyecto).
+      - ./database/teatro.sql:/docker-entrypoint-initdb.d/01-teatro.sql:ro
+      - ./docker/db-init/02-usuario.sh:/docker-entrypoint-initdb.d/02-usuario.sh:ro
+    networks:
+      - datos
+    healthcheck:
+      # mysqladmin ping responde 0 en cuanto el servidor acepta conexiones por TCP,
+      # es decir, cuando ya terminó de importar la base.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  # La base de datos solo es accesible desde PHP: sin salida a internet ni puertos publicados.
+  datos:
+    internal: true
+
+volumes:
+  datos-mysql: {}
