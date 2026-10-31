@@ -1,0 +1,81 @@
+# Despliegue de Teatro en el VPS. Se usa con --project-directory /opt/teatro (ver deploy/desplegar.sh).
+# Solo Nginx publica un puerto, y únicamente en 127.0.0.1: el acceso público es
+# a través del túnel de Cloudflare (servicio teatro-tunnel).
+
+name: teatro
+
+services:
+  web:
+    image: nginx:stable-alpine
+    container_name: teatro-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8090:80"
+    volumes:
+      - ./app:/var/www/teatro:ro
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/fastcgi.conf:/etc/nginx/teatro-fastcgi.conf:ro
+      - ./deploy/errores:/usr/share/nginx/errores:ro
+    depends_on:
+      - php
+    networks:
+      - frontal
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx
+      - /var/run
+    security_opt:
+      - no-new-privileges:true
+
+  php:
+    build: ./deploy
+    image: teatro-php:8.5.12
+    container_name: teatro-php
+    restart: unless-stopped
+    volumes:
+      - ./app:/var/www/teatro:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - frontal
+      - datos
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+  db:
+    image: mysql:8.4
+    container_name: teatro-db
+    restart: unless-stopped
+    command:
+      - --default-time-zone=-06:00
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Falta MYSQL_ROOT_PASSWORD en .env}
+      TEATRO_DB_PASSWORD: ${TEATRO_DB_PASSWORD:?Falta TEATRO_DB_PASSWORD en .env}
+    volumes:
+      - datos-mysql:/var/lib/mysql
+      - ./app/database/teatro.sql:/docker-entrypoint-initdb.d/01-teatro.sql:ro
+      - ./deploy/db-init/02-usuario.sh:/docker-entrypoint-initdb.d/02-usuario.sh:ro
+    networks:
+      - datos
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  frontal: {}
+  # La base de datos solo es accesible desde PHP: sin salida a internet ni puertos publicados.
+  datos:
+    internal: true
+
+volumes:
+  datos-mysql: {}
