@@ -3,52 +3,72 @@
 Solución a la prueba técnica PHP + MySQL. Los usuarios ven las obras de teatro
 disponibles, eligen una, ingresan su identificador y reciben su número de entrada.
 
-## Requisitos
+**Resumen para instalar:** copiar la carpeta en el servidor web, importar
+`database/teatro.sql` y abrir `http://localhost/teatro/`. Con XAMPP, cuyo usuario
+es `root` sin contraseña, no hace falta configurar nada más.
 
-- **PHP 8.5.12** (recomendado, es la versión con la que se desarrolló y probó)
-  o cualquier versión con soporte que incluya el parche de seguridad del 21 de
-  octubre de 2026: 8.4.27, 8.3.36 o 8.2.35 o posteriores. Esas versiones corrigen
-  las vulnerabilidades críticas *PHP2Shell* (CVE-2026-109618 y CVE-2026-109619).
-  Se necesita la extensión `pdo_mysql`, que viene incluida en XAMPP, WAMP y Laragon.
-- MySQL 5.7 o superior, o MariaDB 10.3 o superior, con el motor InnoDB.
-- Un servidor web con PHP, como Apache (por ejemplo, el de XAMPP).
+## 1. Requisitos
 
-## Instalación
+| Componente | Versión |
+|---|---|
+| PHP | **8.5.12** (recomendado: es la versión con la que se desarrolló y probó). También sirve cualquier versión con soporte que tenga el parche de seguridad del 21 de octubre de 2026: **8.4.27, 8.3.36 u 8.2.35** o posteriores. Ese parche corrige las vulnerabilidades críticas *PHP2Shell* (CVE-2026-109618 y CVE-2026-109619). |
+| Extensión de PHP | `pdo_mysql`, que viene activada en XAMPP, WAMP y Laragon |
+| Base de datos | MySQL 5.7 o superior, o MariaDB 10.3 o superior |
+| Servidor web | Apache (por ejemplo, el de XAMPP) o cualquier servidor con PHP |
 
-1. **Copiar los archivos** a una carpeta del servidor web, por ejemplo
-   `C:\xampp\htdocs\teatro` (XAMPP) o `/var/www/html/teatro` (Linux).
+## 2. Instalación
 
-2. **Restaurar la base de datos** desde `database/teatro.sql`. El script crea el
-   esquema `TEATRO`, sus tablas y datos de prueba. Puede hacerse de dos formas:
+### Paso 1: copiar los archivos
 
-   - **phpMyAdmin:** pestaña *Importar*, seleccionar `database/teatro.sql` y pulsar *Importar*.
-   - **Consola:** `mysql -u root -p < database/teatro.sql`
+Copiar la carpeta `teatro` completa dentro de la carpeta pública del servidor web:
 
-3. **Revisar la conexión.** Por defecto se usa el servidor `localhost`, el puerto
-   `3306`, el usuario `root` y la contraseña vacía, que es la configuración de
-   fábrica de XAMPP. **Si sus credenciales son esas, no hace falta cambiar nada.**
-   Si son distintas, copie `includes/config.local.example.php` como
-   `includes/config.local.php` y escriba ahí sus datos.
+- XAMPP (Windows): `C:\xampp\htdocs\teatro`
+- Apache (Linux): `/var/www/html/teatro`
 
-4. **Abrir** `http://localhost/teatro/` en el navegador.
+La aplicación funciona tanto en una subcarpeta (`/teatro/`) como en la raíz del sitio.
 
-> Las fechas de los datos de prueba se calculan a partir del momento en que se
-> restaura el script, así que siempre habrá obras futuras disponibles para probar.
-> Para volver al estado inicial basta con importar el script de nuevo.
+### Paso 2: restaurar la base de datos
 
-## Funcionamiento
+El archivo `database/teatro.sql` crea el esquema **`TEATRO`** con sus tablas
+**`OBRA`** y **`VENTAS`** y carga datos de prueba. Puede importarse de dos formas:
 
-1. **`index.php`** muestra todas las obras disponibles: las que todavía tienen
-   entradas (`disponibles > 0`) y cuya fecha es mayor que la actual
-   (`fecha_obra > NOW()`).
-2. Al seleccionar una obra, **`comprar.php`** pide el identificador del comprador.
-3. Al confirmar, en una sola transacción:
-   - se inserta la venta en **`VENTAS`**, donde `numero_venta` es autoincremental, y
-   - se resta uno a `disponibles` en **`OBRA`**.
-4. **`confirmacion.php`** muestra al usuario su número de entrada, que es el
-   `numero_venta` generado.
+- **phpMyAdmin** (`http://localhost/phpmyadmin`): abrir la pestaña **Importar**,
+  elegir `database/teatro.sql` y pulsar **Importar** (o **Continuar**). No hace
+  falta crear la base antes, porque el script la crea.
+- **Consola:**
 
-## Datos de prueba
+  ```bash
+  mysql -u root -p < database/teatro.sql
+  ```
+
+  En XAMPP para Windows, desde el **Símbolo del sistema (CMD)**, no PowerShell:
+
+  ```bat
+  C:\xampp\mysql\bin\mysql.exe -u root < C:\xampp\htdocs\teatro\database\teatro.sql
+  ```
+
+> Las fechas de las obras se calculan a partir del momento de la importación,
+> así que siempre habrá obras futuras para probar. Para volver al estado inicial
+> basta con importar el archivo otra vez.
+
+### Paso 3: configurar la conexión (solo si hace falta)
+
+Por defecto, la aplicación se conecta a `localhost:3306` con el usuario `root` y
+la contraseña vacía, que es la configuración de fábrica de XAMPP.
+**Si sus credenciales son esas, puede saltar este paso.**
+
+Si son distintas:
+
+1. Copiar `includes/config.local.example.php` como `includes/config.local.php`.
+2. Escribir en ese archivo el servidor, el puerto, el usuario y la contraseña.
+
+### Paso 4: abrir la aplicación
+
+Abrir **`http://localhost/teatro/`** en el navegador. Debe aparecer la página
+**Obras disponibles** con 5 obras. Si aparece "Servicio no disponible", vea la
+sección [Solución de problemas](#5-solución-de-problemas).
+
+## 3. Datos de prueba
 
 | Obra | Situación | ¿Aparece en la lista? |
 |---|---|---|
@@ -57,31 +77,63 @@ disponibles, eligen una, ingresan su identificador y reciben su número de entra
 | La vida es sueño | 2 de 5 disponibles | Sí, hasta que se vendan las 2 |
 | Don Juan Tenorio | 200 de 200 disponibles | Sí |
 | El sí de las niñas | 60 de 60 disponibles | Sí |
-| Luces de bohemia | Agotada (0 de 3) | **No** |
-| Fuenteovejuna | Su fecha ya pasó | **No** |
+| Luces de bohemia | Agotada (0 de 3) | **No**: no tiene entradas |
+| Fuenteovejuna | Su fecha ya pasó | **No**: su fecha no es mayor que la actual |
 
 La tabla `VENTAS` trae 10 ventas previas, así que la primera compra que se haga
 genera la entrada número **11**.
 
-## Cómo probar
+## 4. Cómo probar la solución
+
+### Recorrido principal
+
+1. **Abrir `http://localhost/teatro/`.**
+   Aparecen 5 obras ordenadas por fecha. *Luces de bohemia* (agotada) y
+   *Fuenteovejuna* (fecha pasada) no aparecen.
+2. **Pulsar "Comprar entrada" en *La vida es sueño*.**
+   Se muestra la obra elegida y se pide el identificador.
+3. **Escribir un identificador, por ejemplo `V-12345678`, y pulsar "Comprar entrada".**
+   Aparece "¡Compra realizada con éxito!" con el **número de entrada 11**.
+4. **Verificar en la base de datos** (phpMyAdmin → pestaña SQL, o la consola):
+
+   ```sql
+   SELECT * FROM TEATRO.VENTAS ORDER BY numero_venta DESC LIMIT 1;
+   -- Venta 11, cod_obra 3, comprador V-12345678 y la fecha de la compra
+
+   SELECT cod_obra, nombre, aforo, disponibles FROM TEATRO.OBRA WHERE cod_obra = 3;
+   -- disponibles bajó de 2 a 1
+   ```
+
+5. **Volver a la lista y comprar la última entrada de *La vida es sueño*.**
+   Se genera la entrada 12 y la obra **deja de aparecer** en la lista, porque ya
+   no tiene entradas.
+
+### Casos de error controlados
 
 | Acción | Resultado esperado |
 |---|---|
-| Abrir la página principal | Aparecen 5 obras. *Luces de bohemia* y *Fuenteovejuna* no aparecen. |
-| Comprar una entrada | Se muestra el número de entrada. En la base, la venta aparece en `VENTAS` y `disponibles` de la obra bajó en uno. |
-| Comprar las 2 últimas entradas de *La vida es sueño* | La obra deja de aparecer en la lista. |
-| Dejar el identificador vacío o escribir uno inválido (`ab`, `<script>`) | Se muestra un mensaje y no se registra ninguna venta. |
-| Refrescar (F5) la página de confirmación o pulsar dos veces "Comprar entrada" | No se genera una segunda venta. |
-| Abrir `comprar.php?obra=6`, `?obra=7`, `?obra=999` o `?obra=abc` | Se muestra el mensaje "Obra no disponible". |
+| Pulsar "Comprar entrada" con el identificador vacío | Mensaje "Ingrese su identificador para continuar". No se registra ninguna venta. |
+| Escribir un identificador inválido (`ab`, `<script>`, `1' OR '1'='1`) | Mensaje con el formato esperado. No se registra ninguna venta. |
+| Pulsar F5 en la página de confirmación | Se vuelve a mostrar la misma entrada. No se genera otra venta. |
+| Pulsar varias veces seguidas "Comprar entrada" | Se registra una sola venta. |
+| Abrir `comprar.php?obra=6` (agotada), `?obra=7` (fecha pasada), `?obra=999` o `?obra=abc` | Mensaje "Obra no disponible". |
+| Cambiar el número en `confirmacion.php?venta=1` | Mensaje "Entrada no encontrada": no se pueden ver entradas de otros compradores. |
+| Detener MySQL y recargar la página | Página "Servicio no disponible", sin ningún detalle técnico. |
 
-Consultas para verificar en la base:
+## 5. Solución de problemas
 
-```sql
-SELECT * FROM TEATRO.OBRA;
-SELECT * FROM TEATRO.VENTAS ORDER BY numero_venta DESC;
-```
+| Síntoma | Causa probable y solución |
+|---|---|
+| "Servicio no disponible" | La aplicación no puede conectarse a MySQL. Verifique que MySQL esté iniciado (en XAMPP, botón *Start* de MySQL), que se haya importado `database/teatro.sql` y que las credenciales sean correctas (paso 3). El detalle exacto del error queda en el log de errores de PHP o de Apache (en XAMPP: `C:\xampp\php\logs\php_error_log` o `C:\xampp\apache\logs\error.log`). |
+| La página se ve en blanco o se descarga el código PHP | El servidor web no está ejecutando PHP. Verifique que Apache esté iniciado y que la URL empiece con `http://localhost/`: abrir el archivo directamente desde la carpeta no ejecuta PHP. |
+| "No hay obras disponibles" | No se importaron los datos de prueba, o se importaron hace semanas y las fechas ya pasaron. Importe `database/teatro.sql` de nuevo. |
+| "Su navegador no está aceptando cookies" | La compra necesita una cookie de sesión. Habilite las cookies para `localhost`. |
 
-## Decisiones de diseño
+Para ver el detalle técnico de un error en pantalla mientras se diagnostica,
+active la línea `'debug' => true,` en `includes/config.local.php` (ver
+`includes/config.local.example.php`). **No la deje activada en producción.**
+
+## 6. Decisiones de diseño
 
 ### Tipos de datos
 
@@ -152,7 +204,7 @@ guarda como `V-12345678`.
 - **Zona horaria:** la regla "fecha mayor que la actual" la evalúa MySQL con
   `NOW()`, así que no depende de la configuración de PHP.
 
-## Estructura
+## 7. Estructura de archivos
 
 ```
 ├── index.php              Obras disponibles (página principal)
@@ -160,7 +212,8 @@ guarda como `V-12345678`.
 ├── confirmacion.php       Muestra el número de entrada
 ├── includes/
 │   ├── bootstrap.php      Arranque: manejo de errores, cabeceras y sesión
-│   ├── config.php         Datos de conexión a la base
+│   ├── config.php         Datos de conexión a la base (valores por defecto de XAMPP)
+│   ├── config.local.example.php  Plantilla para credenciales distintas (paso 3)
 │   ├── db.php             Conexión PDO
 │   ├── obras.php          Consultas de obras y registro de ventas
 │   ├── sesion.php         Sesión y token del formulario de compra

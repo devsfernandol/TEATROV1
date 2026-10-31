@@ -14,4 +14,8 @@ return [
         'user'     => 'root',
         'password' => '',
     ],
+
+    // Muestra el detalle técnico de los errores en pantalla. Solo para
+    // diagnosticar un problema de instalación: nunca en producción.
+    // 'debug' => true,
 ];
