@@ -35,7 +35,13 @@ if [[ -z "$(mysql_root -N -e "SHOW DATABASES LIKE 'TEATRO'")" ]]; then
     "$(dirname "$0")/reiniciar-bd.sh"
 fi
 
-# 4. Servidor de PHP.
+# 4. PHP del proyecto (última versión estable, compilada desde php.net).
+"$(dirname "$0")/instalar-php.sh"
+
+# 5. Servidor de PHP.
+echo "→ $("$PHP_BIN" -v | head -1)"
 echo "→ Aplicación disponible en http://localhost:$PHP_PUERTO  (Ctrl+C para detener)"
 cd "$RAIZ"
-exec php -S "localhost:$PHP_PUERTO" -d display_errors=0 -d error_log="$PHP_LOG"
+# Varios procesos en paralelo, como un servidor real (permite probar la concurrencia).
+export PHP_CLI_SERVER_WORKERS="${PHP_CLI_SERVER_WORKERS:-8}"
+exec "$PHP_BIN" -S "localhost:$PHP_PUERTO" -d display_errors=0 -d error_log="$PHP_LOG"

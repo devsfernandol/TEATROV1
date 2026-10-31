@@ -5,8 +5,11 @@ disponibles, eligen una, ingresan su identificador y reciben su número de entra
 
 ## Requisitos
 
-- PHP 7.4 o superior (probado en PHP 8.1) con la extensión `pdo_mysql`, que viene
-  incluida en XAMPP, WAMP y Laragon.
+- **PHP 8.5.12** (recomendado, es la versión con la que se desarrolló y probó)
+  o cualquier versión con soporte que incluya el parche de seguridad del 21 de
+  octubre de 2026: 8.4.27, 8.3.36 o 8.2.35 o posteriores. Esas versiones corrigen
+  las vulnerabilidades críticas *PHP2Shell* (CVE-2026-109618 y CVE-2026-109619).
+  Se necesita la extensión `pdo_mysql`, que viene incluida en XAMPP, WAMP y Laragon.
 - MySQL 5.7 o superior, o MariaDB 10.3 o superior, con el motor InnoDB.
 - Un servidor web con PHP, como Apache (por ejemplo, el de XAMPP).
 
@@ -110,8 +113,21 @@ UPDATE OBRA SET disponibles = disponibles - 1
 La venta solo se inserta si ese `UPDATE` modificó la fila. Si dos personas compran
 la última entrada al mismo tiempo, MySQL atiende las dos actualizaciones de a una
 y solo la primera encuentra entradas. La segunda recibe un mensaje claro y no se
-registra nada. Se probó con 20 compras simultáneas por las 2 últimas entradas:
-hubo exactamente 2 ventas.
+registra nada.
+
+Si con mucha carga MySQL aborta la transacción por un bloqueo (*deadlock* o
+tiempo de espera agotado), la compra se reintenta automáticamente hasta 3 veces.
+Como la transacción fallida se deshace por completo, reintentar no duplica nada.
+
+### Compras simultáneas: escenarios probados
+
+| Escenario | Resultado |
+|---|---|
+| 20 personas compran a la vez las 2 últimas entradas | Exactamente 2 ventas. Las otras 18 reciben "Entradas no disponibles" y nunca se venden más entradas que el aforo. |
+| El mismo usuario envía el mismo formulario 10 veces a la vez (doble clic, conexión lenta) | 1 sola venta. Las 10 respuestas muestran la misma entrada. |
+| El mismo usuario compra en dos pestañas a la vez | 2 ventas con números distintos: son dos compras intencionales. |
+| El mismo identificador compra desde 5 navegadores a la vez | 5 ventas con números distintos y sin repetir. |
+| MySQL está bloqueado momentáneamente | La compra se reintenta sola y se completa. |
 
 ### Identificador del comprador
 

@@ -68,11 +68,43 @@ function obtener_obra_disponible(PDO $pdo, int $codObra): ?array
  * la fila y solo una de ellas encuentra disponibles > 0. Así nunca se vende
  * por encima del aforo.
  *
+ * Si MySQL aborta la transacción por un bloqueo (deadlock o tiempo de espera
+ * agotado bajo alta concurrencia), la compra se reintenta automáticamente:
+ * la transacción completa se deshizo, así que reintentar es seguro.
+ *
  * @return int Número de venta (número de entrada) generado.
  *
  * @throws ObraNoDisponibleException Si la obra no existe, está agotada o ya pasó.
  */
 function registrar_venta(PDO $pdo, int $codObra, string $comprador): int
+{
+    $intentosMaximos = 3;
+
+    for ($intento = 1; ; $intento++) {
+        try {
+            return registrar_venta_en_transaccion($pdo, $codObra, $comprador);
+        } catch (PDOException $e) {
+            if ($intento >= $intentosMaximos || !es_error_de_bloqueo($e)) {
+                throw $e;
+            }
+            error_log(sprintf('[TEATRO-AVISO] Reintento %d de la compra por bloqueo: %s', $intento, $e->getMessage()));
+            usleep(50000 * $intento);
+        }
+    }
+}
+
+/**
+ * Indica si la excepción corresponde a un deadlock (1213) o a un tiempo de
+ * espera de bloqueo agotado (1205) de MySQL.
+ */
+function es_error_de_bloqueo(PDOException $e): bool
+{
+    $codigoMysql = (int) ($e->errorInfo[1] ?? 0);
+
+    return in_array($codigoMysql, [1205, 1213], true);
+}
+
+function registrar_venta_en_transaccion(PDO $pdo, int $codObra, string $comprador): int
 {
     $pdo->beginTransaction();
 
