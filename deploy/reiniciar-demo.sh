@@ -5,7 +5,7 @@
 set -euo pipefail
 cd /opt/teatro
 
-docker exec -i teatro-db sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' < app/database/teatro.sql
+docker exec -i teatro-db sh -c 'MYSQL_PWD="$MYSQL_ROOT_PASSWORD" exec mysql -uroot' < app/database/teatro.sql
 docker restart teatro-php > /dev/null
 
 echo "$(date -Is) Datos de demostración restaurados"
