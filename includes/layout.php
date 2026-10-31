@@ -12,7 +12,6 @@ function render_cabecera(string $titulo): void
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($titulo) ?> · Teatro</title>
     <link rel="stylesheet" href="<?= e(url('assets/css/estilos.css')) ?>">
-    <script src="<?= e(url('assets/js/app.js')) ?>" defer></script>
 </head>
 <body>
     <header class="cabecera">

@@ -104,7 +104,7 @@ render_cabecera('Comprar entrada');
             <div class="alerta alerta--error" role="alert" id="error-identificador"><?= e($error) ?></div>
         <?php endif; ?>
 
-        <form method="post" action="<?= e(url('comprar.php?obra=' . $obra['cod_obra'])) ?>" class="formulario" data-envio-unico novalidate>
+        <form method="post" action="<?= e(url('comprar.php?obra=' . $obra['cod_obra'])) ?>" class="formulario" novalidate>
             <input type="hidden" name="token" value="<?= e($token) ?>">
 
             <div class="campo">
@@ -127,7 +127,7 @@ render_cabecera('Comprar entrada');
                 </p>
             </div>
 
-            <button type="submit" class="boton boton--bloque" data-texto-envio="Procesando compra…">
+            <button type="submit" class="boton boton--bloque">
                 Comprar entrada
             </button>
         </form>
