@@ -4,7 +4,7 @@
 #   2. Lo descomprime en una carpeta limpia, dentro de una subcarpeta /teatro/.
 #   3. Restaura la base desde el .sql del paquete (dos veces, para comprobar
 #      que se puede reimportar).
-#   4. Sirve esa copia con PHP 8.5.12 y ejecuta todas las pruebas (dev/pruebas.sh).
+#   4. Sirve esa copia con PHP (el de .dev o el de PHP_BIN) y ejecuta todas las pruebas (dev/pruebas.sh).
 #   5. Comprueba que, con la base caída o con credenciales incorrectas, el usuario
 #      ve una página amigable sin detalles técnicos y el detalle queda en el log.
 #
@@ -64,7 +64,8 @@ echo "Paquete de entrega ($REF)"
 ZIP="$RAIZ/dist/teatro.zip"
 python3 -I -c 'import sys, zipfile; print("\n".join(zipfile.ZipFile(sys.argv[1]).namelist()))' "$ZIP" > "$TMP/contenido.txt"
 
-for requerido in teatro/index.php teatro/comprar.php teatro/confirmacion.php teatro/LEAME.md teatro/database/teatro.sql \
+for requerido in teatro/index.php teatro/comprar.php teatro/confirmacion.php teatro/consultar.php teatro/includes/limites.php \
+                teatro/LEAME.md teatro/database/teatro.sql \
                 teatro/docker-compose.yml teatro/.env.example teatro/docker/Dockerfile teatro/docker/php-fpm.conf \
                 teatro/docker/nginx.conf teatro/docker/fastcgi.conf teatro/docker/php.ini \
                 teatro/docker/db-init/02-usuario.sh teatro/docker/demasiadas-solicitudes.html; do
@@ -76,6 +77,8 @@ no_contiene "No incluye el despliegue propio del autor (deploy/)" "$TMP/contenid
 igual "No incluye un .env con claves" "$(grep -cx 'teatro/.env' "$TMP/contenido.txt")" "0"
 igual "No incluye credenciales locales (config.local.php)" "$(grep -cx 'teatro/includes/config.local.php' "$TMP/contenido.txt")" "0"
 no_contiene "No incluye el enunciado (PDF)" "$TMP/contenido.txt" ".pdf"
+no_contiene "No incluye archivos Zone.Identifier de Windows" "$TMP/contenido.txt" "Zone.Identifier"
+no_contiene "No incluye otros ZIP" "$TMP/contenido.txt" ".zip"
 igual "No incluye el README de desarrollo" "$(grep -cx 'teatro/README.md' "$TMP/contenido.txt")" "0"
 igual "La primera página se llama index" "$(grep -c '^teatro/index\.' "$TMP/contenido.txt")" "1"
 
@@ -124,6 +127,43 @@ if PRUEBAS_PHP_LOG="$TMP/php-app.log" "$(dirname "$0")/pruebas.sh" "http://local
 else
     falla "Pruebas funcionales" "$(grep -A1 '✗' "$TMP/funcionales.txt" | sed 's/\x1b\[[0-9;]*m//g')"
 fi
+
+# -----------------------------------------------------------------------------
+echo
+echo "Límites contra compras masivas y contra adivinar entradas (por IP)"
+BD_APP=(TEATRO_DB_HOST="$TEATRO_DB_HOST" TEATRO_DB_PORT="$TEATRO_DB_PORT" TEATRO_DB_USER="$TEATRO_DB_USER" TEATRO_DB_PASSWORD="$TEATRO_DB_PASSWORD")
+servir 8006 "$TMP/php-limites.log" "${BD_APP[@]}" \
+    TEATRO_LIMITE_COMPRAS_IP=2 TEATRO_LIMITE_CONSULTAS_IP=3 TEATRO_LIMITES_DIR="$TMP/limites"
+URL_LIM="http://localhost:8006/teatro"
+VENTAS_ANTES=$(mysql_root -N -B TEATRO -e 'SELECT COUNT(*) FROM VENTAS')
+for i in 1 2 3; do
+    CJ="$TMP/lim$i.txt"
+    TJ=$(curl -s -c "$CJ" -b "$CJ" "$URL_LIM/comprar.php?obra=1" | grep -oE 'name="token" value="[a-f0-9]{64}"' | grep -oE '[a-f0-9]{64}')
+    curl -s -o "$TMP/lim$i.html" -w '%{http_code}' -c "$CJ" -b "$CJ" -d "token=$TJ&identificador=V2000000$i" "$URL_LIM/comprar.php?obra=1" > "$TMP/lim$i.code"
+done
+igual "Con límite de 2 compras por IP: la 1.ª compra se registra" "$(cat "$TMP/lim1.code")" "303"
+igual "Con límite de 2 compras por IP: la 2.ª compra se registra" "$(cat "$TMP/lim2.code")" "303"
+igual "Con límite de 2 compras por IP: la 3.ª se rechaza con 429" "$(cat "$TMP/lim3.code")" "429"
+contiene "La 3.ª compra muestra un mensaje claro" "$TMP/lim3.html" "Demasiadas compras"
+igual "Solo se registraron 2 ventas" "$(mysql_root -N -B TEATRO -e 'SELECT COUNT(*) FROM VENTAS')" "$((VENTAS_ANTES + 2))"
+CJ="$TMP/limc.txt"
+curl -s -o /dev/null -c "$CJ" -b "$CJ" "$URL_LIM/consultar.php"
+for i in 1 2 3; do
+    curl -s -o /dev/null -c "$CJ" -b "$CJ" -d "numero=$i&identificador=V0000000$i" "$URL_LIM/consultar.php"
+done
+igual "Con límite de 3 consultas por IP: la 4.ª se rechaza con 429 aunque los datos sean correctos" \
+    "$(curl -s -o "$TMP/limc.html" -w '%{http_code}' -c "$CJ" -b "$CJ" -d "numero=1&identificador=V12345678" "$URL_LIM/consultar.php")" "429"
+contiene "La consulta rechazada muestra un mensaje claro" "$TMP/limc.html" "Demasiadas consultas"
+no_contiene "Los límites no generan errores en el log" "$TMP/php-limites.log" "[TEATRO]"
+
+# Si la carpeta de los límites no se puede usar, la venta no debe bloquearse.
+servir 8007 "$TMP/php-limites-roto.log" "${BD_APP[@]}" TEATRO_LIMITES_DIR=/proc/teatro-no-se-puede-escribir
+CJ="$TMP/limr.txt"
+TJ=$(curl -s -c "$CJ" -b "$CJ" "http://localhost:8007/teatro/comprar.php?obra=1" | grep -oE 'name="token" value="[a-f0-9]{64}"' | grep -oE '[a-f0-9]{64}')
+igual "Con la carpeta de límites sin permisos, la compra igual se completa" \
+    "$(curl -s -o /dev/null -w '%{http_code}' -c "$CJ" -b "$CJ" -d "token=$TJ&identificador=V30000001" "http://localhost:8007/teatro/comprar.php?obra=1")" "303"
+contiene "y el problema queda avisado en el log" "$TMP/php-limites-roto.log" "No se pudo aplicar el límite de intentos"
+"$(dirname "$0")/reiniciar-bd.sh" >/dev/null
 
 # -----------------------------------------------------------------------------
 echo

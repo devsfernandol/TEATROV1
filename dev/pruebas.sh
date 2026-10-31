@@ -60,6 +60,7 @@ igual "Muestra las 5 obras disponibles" "$(grep -c 'class="tarjeta obra"' "$TMP/
 no_contiene "No muestra la obra agotada (Luces de bohemia)" "$TMP/index.html" "Luces de bohemia"
 no_contiene "No muestra la obra con fecha pasada (Fuenteovejuna)" "$TMP/index.html" "Fuenteovejuna"
 contiene "Enlaza a la compra de cada obra" "$TMP/index.html" 'comprar.php?obra=1'
+contiene "Enlaza a «Consultar mi entrada»" "$TMP/index.html" 'consultar.php'
 igual "Las obras se ordenan por fecha (primera: la más próxima)" \
     "$(grep -oE 'obra__nombre">[^<]+' "$TMP/index.html" | head -1 | cut -d'>' -f2)" "La casa de Bernarda Alba"
 contiene "Muestra las entradas disponibles de cada obra" "$TMP/index.html" "<dd>78 de 80</dd>"
@@ -78,6 +79,13 @@ contiene "Sin caché (la disponibilidad cambia en tiempo real)" "$TMP/cabeceras.
 contiene "Cookie de sesión HttpOnly" "$TMP/cabeceras.txt" "HttpOnly"
 contiene "Cookie de sesión SameSite=Lax" "$TMP/cabeceras.txt" "SameSite=Lax"
 no_contiene "No expone la versión de PHP (X-Powered-By)" "$TMP/cabeceras.txt" "X-Powered-By: PHP"
+igual "Por HTTP la cookie de sesión no se marca Secure" "$(grep -i '^set-cookie' "$TMP/cabeceras.txt" | grep -ci 'secure')" "0"
+curl -s -D "$TMP/cabeceras-proxy.txt" -o /dev/null -H 'X-Forwarded-Proto: https' "$BASE/index.php"
+igual "Detrás de un proxy HTTPS (X-Forwarded-Proto) la cookie se marca Secure" \
+    "$(grep -i '^set-cookie' "$TMP/cabeceras-proxy.txt" | grep -ci 'secure')" "1"
+curl -s -D "$TMP/cabeceras-proxy.txt" -o /dev/null -H 'Forwarded: for=203.0.113.5;proto=https' "$BASE/index.php"
+igual "Detrás de un proxy HTTPS (Forwarded) la cookie se marca Secure" \
+    "$(grep -i '^set-cookie' "$TMP/cabeceras-proxy.txt" | grep -ci 'secure')" "1"
 for pagina in index.php "comprar.php?obra=1" "comprar.php?obra=999"; do
     curl -s "$BASE/$pagina" > "$TMP/pagina.html"
     contiene "$pagina: HTML en español con charset UTF-8" "$TMP/pagina.html" '<html lang="es">'
@@ -159,6 +167,38 @@ igual "Reenviar no genera otra venta" "$(sql 'SELECT COUNT(*) FROM VENTAS')" "11
 igual "Reenviar no descuenta otra entrada" "$(sql 'SELECT disponibles FROM OBRA WHERE cod_obra = 1')" "$((DISP_ANTES - 1))"
 igual "Otra sesión no puede ver la entrada 11" "$(codigo "$BASE/confirmacion.php?venta=11")" "404"
 igual "No se pueden ver entradas ajenas (venta 1)" "$(codigo "$BASE/confirmacion.php?venta=1" -b "$C")" "404"
+curl -s "$BASE/confirmacion.php?venta=11" > "$TMP/ajena.html"
+contiene "La entrada no encontrada indica cómo recuperarla" "$TMP/ajena.html" "Consultar mi entrada"
+
+# -----------------------------------------------------------------------------
+echo "Consultar mi entrada (recuperarla desde otro navegador)"
+CQ="$TMP/consulta.txt"
+igual "consultar.php responde 200" "$(codigo "$BASE/consultar.php" -c "$CQ" -b "$CQ")" "200"
+curl -s -b "$CQ" "$BASE/consultar.php" > "$TMP/consulta.html"
+contiene "Pide el número de entrada" "$TMP/consulta.html" 'name="numero"'
+contiene "Pide el identificador" "$TMP/consulta.html" 'name="identificador"'
+RESP=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' -c "$CQ" -b "$CQ" \
+    -d "numero=11&identificador=v-12.345.678" "$BASE/consultar.php")
+igual "Con número e identificador correctos lleva a la entrada 11" "$RESP" "303 $BASE/confirmacion.php?venta=11"
+curl -s -b "$CQ" "$BASE/confirmacion.php?venta=11" > "$TMP/recuperada.html"
+contiene "La entrada recuperada muestra su número" "$TMP/recuperada.html" 'entrada__numero-valor">11<'
+contiene "La entrada recuperada muestra la obra" "$TMP/recuperada.html" "La casa de Bernarda Alba"
+
+CQ2="$TMP/consulta2.txt"
+codigo "$BASE/consultar.php" -c "$CQ2" -b "$CQ2" >/dev/null
+igual "Identificador que no corresponde a la entrada responde 404" \
+    "$(codigo "$BASE/consultar.php" -c "$CQ2" -b "$CQ2" -d "numero=11&identificador=V99999999")" "404"
+igual "y no da acceso a la entrada" "$(codigo "$BASE/confirmacion.php?venta=11" -b "$CQ2")" "404"
+curl -s -c "$CQ2" -b "$CQ2" -d "numero=11&identificador=V99999999" "$BASE/consultar.php" > "$TMP/consulta-mal.html"
+contiene "Explica que no encontró la entrada" "$TMP/consulta-mal.html" "No encontramos una entrada con ese número e identificador"
+igual "Entrada inexistente responde 404" "$(codigo "$BASE/consultar.php" -c "$CQ2" -b "$CQ2" -d "numero=999&identificador=V12345678")" "404"
+for q in "numero=&identificador=V12345678" "numero=abc&identificador=V12345678" "numero=11&identificador=ab" "numero[]=11&identificador=V12345678"; do
+    igual "Datos inválidos ($q) responden 422" "$(codigo "$BASE/consultar.php" -c "$CQ2" -b "$CQ2" -d "$q")" "422"
+done
+curl -s -c "$CQ2" -b "$CQ2" --data-urlencode 'numero=<script>' -d 'identificador=V12345678' "$BASE/consultar.php" > "$TMP/consulta-xss.html"
+no_contiene "El número ingresado se escapa (sin XSS)" "$TMP/consulta-xss.html" "<script>"
+igual "Sin cookies responde 400" "$(codigo "$BASE/consultar.php" -d "numero=11&identificador=V-12345678")" "400"
+igual "Consultar no registra ventas" "$(sql 'SELECT COUNT(*) FROM VENTAS')" "11"
 
 # -----------------------------------------------------------------------------
 echo "Identificadores válidos en los límites"
@@ -239,7 +279,16 @@ for i in $(seq 1 5); do
         -d "token=$(cat "$TMP/nt$i.txt")&identificador=V77777777" "$BASE/comprar.php?obra=2" > "$TMP/nr$i.txt" &
 done
 wait
-igual "Mismo identificador desde 5 navegadores a la vez: 5 compras exitosas" "$(cat "$TMP"/nr*.txt | grep -c '^303$')" "5"
+igual "Mismo identificador desde 5 navegadores a la vez: solo 4 compras (máximo por persona)" "$(cat "$TMP"/nr*.txt | grep -c '^303$')" "4"
+igual "Mismo identificador desde 5 navegadores a la vez: la quinta se rechaza con 422" "$(cat "$TMP"/nr*.txt | grep -c '^422$')" "1"
+igual "VENTAS: ese identificador tiene exactamente 4 entradas de la obra" \
+    "$(sql "SELECT COUNT(*) FROM VENTAS WHERE cod_obra = 2 AND comprador = 'V77777777'")" "4"
+CL="$TMP/limite.txt"
+TL=$(token_de "$CL" 2)
+curl -s -c "$CL" -b "$CL" -d "token=$TL&identificador=V77777777" "$BASE/comprar.php?obra=2" > "$TMP/limite.html"
+contiene "Explica el máximo de entradas por persona" "$TMP/limite.html" "ya tiene el máximo de 4 entradas"
+igual "El mismo identificador puede comprar para otra obra" \
+    "$(codigo "$BASE/comprar.php?obra=1" -c "$CL" -b "$CL" -d "token=$(token_de "$CL" 1)&identificador=V77777777")" "303"
 igual "Mismo identificador desde 5 navegadores a la vez: números de entrada sin repetir" \
     "$(sql 'SELECT COUNT(DISTINCT numero_venta) = COUNT(*) FROM VENTAS')" "1"
 

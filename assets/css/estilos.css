@@ -94,9 +94,19 @@ a { color: var(--color-primario); }
 
 .cabecera__contenido {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
+    gap: 0.5rem 1.5rem;
     min-height: 64px;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.cabecera nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
 }
 
 .marca {
@@ -252,6 +262,15 @@ a { color: var(--color-primario); }
 .obra__datos dd { margin: 0; }
 
 .obra__accion { margin-top: auto; }
+
+/* --- Consulta de entrada -------------------------------------------------- */
+
+.consulta {
+    max-width: 32rem;
+    margin: 0 auto;
+}
+
+.consulta h1 { margin-bottom: 0.5rem; }
 
 /* --- Compra -------------------------------------------------------------- */
 

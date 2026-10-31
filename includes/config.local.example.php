@@ -15,6 +15,14 @@ return [
         'password' => '',
     ],
 
+    // Protección contra compras masivas (0 = sin límite). Para hacer muchas
+    // compras de prueba desde un mismo equipo, suba compras_por_ip.
+    // 'limites' => [
+    //     'entradas_por_comprador' => 4,   // entradas por persona para cada obra
+    //     'compras_por_ip'         => 10,  // compras por IP en una hora
+    //     'consultas_por_ip'       => 10,  // consultas de entradas por IP en 15 minutos
+    // ],
+
     // Muestra el detalle técnico de los errores en pantalla. Solo para
     // diagnosticar un problema de instalación: nunca en producción.
     // 'debug' => true,

@@ -15,7 +15,7 @@ if ($venta === null) {
     render_pagina_mensaje(
         404,
         'Entrada no encontrada',
-        'No encontramos la entrada solicitada. Las entradas solo pueden consultarse desde el navegador en el que se compraron.'
+        'No encontramos la entrada solicitada. Si la compró en otro navegador o lo cerró, puede verla en «Consultar mi entrada» con su número de entrada y su identificador.'
     );
     exit;
 }
@@ -25,7 +25,7 @@ render_cabecera('Compra realizada');
 <section class="tarjeta entrada" aria-labelledby="titulo-confirmacion">
     <div class="alerta alerta--exito" role="status">
         <h1 id="titulo-confirmacion">¡Compra realizada con éxito!</h1>
-        <p>Conserve su número de entrada.</p>
+        <p>Conserve su número de entrada. Con él y su identificador puede volver a ver esta entrada desde cualquier navegador en «Consultar mi entrada».</p>
     </div>
 
     <div class="entrada__numero">

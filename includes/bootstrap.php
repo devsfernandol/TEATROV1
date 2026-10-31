@@ -78,6 +78,7 @@ ob_start();
 require __DIR__ . '/helpers.php';
 require __DIR__ . '/db.php';
 require __DIR__ . '/sesion.php';
+require __DIR__ . '/limites.php';
 require __DIR__ . '/obras.php';
 require __DIR__ . '/layout.php';
 

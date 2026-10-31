@@ -22,6 +22,7 @@ function render_cabecera(string $titulo): void
             </a>
             <nav aria-label="Principal">
                 <a class="cabecera__enlace" href="<?= e(url('index.php')) ?>">Obras disponibles</a>
+                <a class="cabecera__enlace" href="<?= e(url('consultar.php')) ?>">Consultar mi entrada</a>
             </nav>
         </div>
     </header>

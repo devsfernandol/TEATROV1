@@ -14,6 +14,10 @@ final class ObraNoDisponibleException extends RuntimeException
 {
 }
 
+final class LimiteEntradasException extends RuntimeException
+{
+}
+
 /**
  * Asegura los tipos de una fila de OBRA. Según la versión de PHP y el modo de
  * consulta, MySQL puede devolver los números como texto.
@@ -68,21 +72,29 @@ function obtener_obra_disponible(PDO $pdo, int $codObra): ?array
  * la fila y solo una de ellas encuentra disponibles > 0. Así nunca se vende
  * por encima del aforo.
  *
+ * El límite de entradas por comprador se comprueba después de ese UPDATE,
+ * mientras la transacción retiene la fila de la obra: las compras simultáneas
+ * de una misma obra se atienden de a una, así que el mismo identificador no
+ * puede superar el límite comprando desde varios navegadores a la vez.
+ *
  * Si MySQL aborta la transacción por un bloqueo (deadlock o tiempo de espera
  * agotado bajo alta concurrencia), la compra se reintenta automáticamente:
  * la transacción completa se deshizo, así que reintentar es seguro.
  *
  * @return int Número de venta (número de entrada) generado.
  *
+ * @param int $maximoPorComprador Entradas que un comprador puede tener para la obra (0 = sin límite).
+ *
  * @throws ObraNoDisponibleException Si la obra no existe, está agotada o ya pasó.
+ * @throws LimiteEntradasException Si el comprador ya tiene el máximo de entradas de la obra.
  */
-function registrar_venta(PDO $pdo, int $codObra, string $comprador): int
+function registrar_venta(PDO $pdo, int $codObra, string $comprador, int $maximoPorComprador): int
 {
     $intentosMaximos = 3;
 
     for ($intento = 1; ; $intento++) {
         try {
-            return registrar_venta_en_transaccion($pdo, $codObra, $comprador);
+            return registrar_venta_en_transaccion($pdo, $codObra, $comprador, $maximoPorComprador);
         } catch (PDOException $e) {
             if ($intento >= $intentosMaximos || !es_error_de_bloqueo($e)) {
                 throw $e;
@@ -104,7 +116,7 @@ function es_error_de_bloqueo(PDOException $e): bool
     return in_array($codigoMysql, [1205, 1213], true);
 }
 
-function registrar_venta_en_transaccion(PDO $pdo, int $codObra, string $comprador): int
+function registrar_venta_en_transaccion(PDO $pdo, int $codObra, string $comprador, int $maximoPorComprador): int
 {
     $pdo->beginTransaction();
 
@@ -120,6 +132,21 @@ function registrar_venta_en_transaccion(PDO $pdo, int $codObra, string $comprado
 
         if ($descontar->rowCount() !== 1) {
             throw new ObraNoDisponibleException('La obra no está disponible para la venta.');
+        }
+
+        if ($maximoPorComprador > 0) {
+            $compradas = $pdo->prepare(
+                'SELECT COUNT(*)
+                   FROM VENTAS
+                  WHERE cod_obra = :cod_obra
+                    AND comprador = :comprador
+                    FOR UPDATE'
+            );
+            $compradas->execute(['cod_obra' => $codObra, 'comprador' => $comprador]);
+
+            if ((int) $compradas->fetchColumn() >= $maximoPorComprador) {
+                throw new LimiteEntradasException('El comprador ya tiene el máximo de entradas de la obra.');
+            }
         }
 
         $insertar = $pdo->prepare(

@@ -11,6 +11,13 @@ declare(strict_types=1);
  *   3. Los valores por defecto de este archivo.
  */
 
+// Límite numérico desde una variable de entorno. A diferencia de "?:", respeta el 0 (sin límite).
+$limiteDeEntorno = static function (string $variable, int $porDefecto): int {
+    $valor = getenv($variable);
+
+    return ($valor === false || $valor === '') ? $porDefecto : (int) $valor;
+};
+
 $config = [
     'db' => [
         'host'     => getenv('TEATRO_DB_HOST') ?: 'localhost',
@@ -21,6 +28,18 @@ $config = [
     ],
     // Nunca activar en producción: muestra el detalle técnico de los errores.
     'debug' => filter_var(getenv('TEATRO_DEBUG') ?: false, FILTER_VALIDATE_BOOLEAN),
+
+    // Protección contra compras masivas (bots) y contra adivinar entradas ajenas.
+    'limites' => [
+        // Entradas que una misma persona (identificador) puede comprar para una obra.
+        'entradas_por_comprador' => $limiteDeEntorno('TEATRO_LIMITE_ENTRADAS_COMPRADOR', 4),
+        // Compras por dirección IP en una hora.
+        'compras_por_ip'         => $limiteDeEntorno('TEATRO_LIMITE_COMPRAS_IP', 10),
+        // Consultas de entradas por dirección IP en 15 minutos.
+        'consultas_por_ip'       => $limiteDeEntorno('TEATRO_LIMITE_CONSULTAS_IP', 10),
+        // Carpeta donde se lleva la cuenta (por defecto, la temporal del sistema).
+        'directorio'             => getenv('TEATRO_LIMITES_DIR') ?: sys_get_temp_dir() . '/teatro-limites',
+    ],
 ];
 
 $archivoLocal = __DIR__ . '/config.local.php';

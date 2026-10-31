@@ -5,6 +5,7 @@ declare(strict_types=1);
 require __DIR__ . '/includes/bootstrap.php';
 
 $pdo = db();
+$limites = config()['limites'];
 $error = null;
 $identificadorIngresado = '';
 $token = null;
@@ -35,12 +36,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Ingrese su identificador para continuar.';
         } elseif (!identificador_valido($identificador)) {
             $error = 'El identificador debe tener entre 5 y 20 caracteres y solo puede contener letras (sin acentos), números y guiones.';
+        } elseif (!consumir_intento('compra', $limites['compras_por_ip'], 3600)) {
+            // Freno a compras automatizadas: demasiadas compras desde la misma conexión.
+            error_log('[TEATRO-AVISO] Límite de compras por IP alcanzado: ' . ($_SERVER['REMOTE_ADDR'] ?? ''));
+            render_pagina_mensaje(
+                429,
+                'Demasiadas compras',
+                'Se alcanzó el máximo de compras permitidas desde su conexión. Por favor, inténtelo de nuevo más tarde. No se registró ninguna compra.'
+            );
+            exit;
         } else {
             // Una vez iniciada, la compra termina aunque el usuario cierre la página.
             ignore_user_abort(true);
 
             try {
-                $numeroVenta = registrar_venta($pdo, $codObra, $identificador);
+                $numeroVenta = registrar_venta($pdo, $codObra, $identificador, $limites['entradas_por_comprador']);
             } catch (ObraNoDisponibleException $e) {
                 render_pagina_mensaje(
                     409,
@@ -48,10 +58,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'Lo sentimos, las entradas de esta obra se agotaron o la obra ya no está a la venta. No se registró ninguna compra.'
                 );
                 exit;
+            } catch (LimiteEntradasException $e) {
+                $numeroVenta = null;
+                $error = sprintf(
+                    'Este identificador ya tiene el máximo de %d entradas permitidas para esta obra. No se registró ninguna compra.',
+                    $limites['entradas_por_comprador']
+                );
             }
 
-            consumir_token_compra($token, $numeroVenta);
-            redirigir('confirmacion.php?venta=' . $numeroVenta);
+            if ($numeroVenta !== null) {
+                consumir_token_compra($token, $numeroVenta);
+                redirigir('confirmacion.php?venta=' . $numeroVenta);
+            }
         }
 
         http_response_code(422);
@@ -124,6 +142,9 @@ render_cabecera('Comprar entrada');
                 >
                 <p class="campo__ayuda" id="ayuda-identificador">
                     Su documento de identidad: entre 5 y 20 caracteres (letras, números y guiones). Ejemplo: V-12345678.
+                    <?php if ($limites['entradas_por_comprador'] > 0): ?>
+                        Máximo <?= e($limites['entradas_por_comprador']) ?> entradas por persona para cada obra.
+                    <?php endif; ?>
                 </p>
             </div>
 

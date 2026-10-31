@@ -37,10 +37,26 @@ function iniciar_sesion(): void
     session_start();
 }
 
+/**
+ * Indica si el visitante llegó por HTTPS, también cuando hay un proxy inverso
+ * o un balanceador delante que atiende el HTTPS y reenvía la petición por HTTP.
+ *
+ * Confiar en X-Forwarded-Proto es seguro aquí: solo decide si la cookie de
+ * sesión se marca Secure. Quien envíe el encabezado falso solo consigue que
+ * su propio navegador no devuelva la cookie por HTTP.
+ */
 function es_https(): bool
 {
-    return (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-        || (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443;
+    if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+        || (int) ($_SERVER['SERVER_PORT'] ?? 0) === 443) {
+        return true;
+    }
+
+    // X-Forwarded-Proto puede traer una lista si hay varios proxies: vale el primero (el del visitante).
+    $protocolo = strtolower(trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''))[0]));
+
+    return $protocolo === 'https'
+        || preg_match('/(^|[;,\s])proto=https($|[;,\s])/i', (string) ($_SERVER['HTTP_FORWARDED'] ?? '')) === 1;
 }
 
 /**
@@ -83,8 +99,19 @@ function consumir_token_compra(string $token, int $numeroVenta): void
 {
     $_SESSION['tokens_compra'][$token]['numero_venta'] = $numeroVenta;
 
+    recordar_venta_en_sesion($numeroVenta);
+}
+
+/**
+ * Permite ver la venta desde esta sesión (después de comprarla o de
+ * recuperarla con su número y el identificador del comprador).
+ */
+function recordar_venta_en_sesion(int $numeroVenta): void
+{
     $ventas = $_SESSION['ventas'] ?? [];
-    $ventas[] = $numeroVenta;
+    if (!in_array($numeroVenta, $ventas, true)) {
+        $ventas[] = $numeroVenta;
+    }
     $_SESSION['ventas'] = array_slice($ventas, -MAX_VENTAS_SESION);
 }
 

@@ -2,8 +2,7 @@
 #
 #   docker compose up -d        → http://IP_DEL_SERVIDOR:8080
 #
-# Configuración opcional en un archivo .env junto a este (ver LEAME, sección 3):
-#   TEATRO_PUERTO, TEATRO_DB_PASSWORD, TEATRO_ZONA_HORARIA
+# Configuración opcional en un archivo .env junto a este (ver .env.example y LEAME, sección 3).
 
 name: teatro
 
@@ -31,7 +30,7 @@ services:
 
   php:
     build: ./docker
-    image: teatro-php:8.5.12
+    image: teatro-php
     restart: unless-stopped
     environment:
       TEATRO_DB_HOST: db
@@ -39,6 +38,9 @@ services:
       TEATRO_DB_NAME: TEATRO
       TEATRO_DB_USER: teatro_app
       TEATRO_DB_PASSWORD: ${TEATRO_DB_PASSWORD:-Teatro.App-2026}
+      TEATRO_LIMITE_ENTRADAS_COMPRADOR: ${TEATRO_LIMITE_ENTRADAS_COMPRADOR:-4}
+      TEATRO_LIMITE_COMPRAS_IP: ${TEATRO_LIMITE_COMPRAS_IP:-10}
+      TEATRO_LIMITE_CONSULTAS_IP: ${TEATRO_LIMITE_CONSULTAS_IP:-10}
     volumes:
       - ./:/var/www/teatro:ro
     depends_on:

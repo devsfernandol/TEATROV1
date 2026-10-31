@@ -38,7 +38,7 @@ Hecho en **PHP sin frameworks**, **MySQL** y **HTML/CSS**, sin JavaScript.
 | Respaldo de la base de datos | `database/teatro.sql` |
 | Archivo LEAME con los pasos adicionales | `LEAME.md` |
 | Pensada para producción | `docker compose up -d` levanta Nginx + PHP-FPM + MySQL listos para producción ([LEAME, sección 3](LEAME.md#3-instalación-en-producción)) |
-| Sin errores | Validaciones, manejo de errores y [105 pruebas automáticas](#8-pruebas-automáticas) |
+| Sin errores | Validaciones, manejo de errores y [131 pruebas automáticas](#8-pruebas-automáticas) |
 
 El recorrido del usuario es:
 
@@ -53,9 +53,9 @@ index.php  ──"Comprar entrada"──▶  comprar.php  ──identificador─
 
 | Componente | Versión |
 |---|---|
-| PHP | **8.5.12** (recomendado: es la versión con la que se desarrolló y probó). También sirve **8.4.27, 8.3.36 u 8.2.35** o posteriores, que tienen el parche de seguridad de *PHP2Shell* (CVE-2026-109618 y CVE-2026-109619). |
+| PHP | **8.1 o superior**. Probado con PHP 8.1 y PHP 8.5. |
 | Extensión de PHP | `pdo_mysql`, que viene activada en XAMPP, WAMP y Laragon |
-| Base de datos | MySQL 5.7 o superior, o MariaDB 10.3 o superior |
+| Base de datos | MySQL 8.0.16 o superior, o MariaDB 10.3 o superior. No MySQL 5.7: ignora las restricciones `CHECK` y ya no tiene soporte. |
 | Servidor web | Apache (el de XAMPP sirve) o cualquier servidor con PHP |
 
 ---
@@ -323,17 +323,18 @@ En **otra terminal**, con la aplicación levantada:
 dev/pruebas.sh
 ```
 
-Ejecuta **105 pruebas** de punta a punta en unos 30 segundos. Al final
-debe decir `✓ 105 pruebas correctas.`
+Ejecuta **131 pruebas** de punta a punta en unos 30 segundos. Al final
+debe decir `✓ 131 pruebas correctas.`
 
 | Grupo | Qué comprueba |
 |---|---|
 | Lista de obras | Solo aparecen las disponibles y futuras, ordenadas por fecha, con todos sus datos |
-| Seguridad | Cabeceras HTTP, cookie de sesión, CSRF, XSS e inyección SQL |
+| Seguridad | Cabeceras HTTP, cookie de sesión (también `Secure` detrás de un proxy HTTPS), CSRF, XSS e inyección SQL |
 | Validación | Parámetros e identificadores inválidos, valores extremos (20 000 caracteres, bytes no UTF-8, arreglos) y los límites válidos |
 | Compra | La venta se guarda en `VENTAS`, `disponibles` baja en 1 y se muestra el número |
 | Doble envío y privacidad | F5, doble clic y acceso a entradas de otros |
-| Concurrencia | 20 compras simultáneas por 2 entradas, el mismo formulario 10 veces a la vez, dos pestañas y el mismo identificador desde 5 navegadores |
+| Consultar mi entrada | Recuperar la entrada desde otro navegador con número e identificador; datos que no corresponden, inválidos o sin cookies |
+| Concurrencia | 20 compras simultáneas por 2 entradas, el mismo formulario 10 veces a la vez, dos pestañas y el mismo identificador desde 5 navegadores (solo 4 compras: el máximo por persona) |
 | Bloqueos de MySQL | La compra se reintenta sola si MySQL da *deadlock* o tiempo de espera |
 | Integridad | `disponibles = aforo − ventas` en todas las obras |
 | Log de PHP | Sin errores ni avisos |
@@ -353,9 +354,14 @@ Simula lo que haría el evaluador, en alrededor de 1 minuto:
 2. Lo descomprime en una carpeta limpia, dentro de una subcarpeta `/teatro/`.
 3. Importa `database/teatro.sql` dos veces y comprueba que el esquema coincida
    con el enunciado.
-4. Ejecuta las 105 pruebas funcionales sobre esa copia.
-5. Comprueba que, con MySQL caído o con la contraseña mal, el usuario ve una
+4. Ejecuta las 131 pruebas funcionales sobre esa copia.
+5. Prueba los límites por IP de compras y consultas con un servidor aparte, y
+   que la venta no se bloquee si la carpeta de los límites no se puede escribir.
+6. Comprueba que, con MySQL caído o con la contraseña mal, el usuario ve una
    página amigable y el detalle queda solo en el log.
+
+Para probar con otro PHP (por ejemplo, el 8.1 del sistema):
+`PHP_BIN=/usr/bin/php dev/prueba-instalacion.sh`.
 
 Usa el **último commit**, no los cambios sin confirmar.
 
@@ -427,12 +433,14 @@ completa, así que reintentar no duplica nada.
 | XSS | Todo lo que se muestra pasa por `htmlspecialchars` |
 | Compra duplicada (doble clic, F5, Atrás) | Cada formulario lleva un token de un solo uso y después de comprar se redirige a la confirmación (POST/Redirect/GET) |
 | CSRF | El mismo token: un formulario de otro sitio no puede comprar |
-| Ver entradas de otros | La confirmación solo muestra las ventas hechas en esa misma sesión |
+| Ver entradas de otros | La confirmación solo muestra las ventas de esa sesión; desde otro navegador se recuperan con número **e** identificador, con intentos limitados por IP |
+| Bots que compran todo | Máximo 4 entradas por identificador y obra (en la misma transacción de la venta) y máximo 10 compras por IP en una hora (`includes/limites.php`) |
+| Cookie sin `Secure` detrás de un proxy | `es_https()` reconoce `X-Forwarded-Proto` y `Forwarded` |
 | Datos manipulados | La obra y el identificador se validan en el servidor y la disponibilidad se vuelve a comprobar al comprar |
 | Errores técnicos en pantalla | Se registran en el log y el usuario ve una página amigable, también si MySQL no responde |
 | Zona horaria | "Fecha mayor que la actual" la evalúa MySQL con `NOW()`, no PHP |
 | Clickjacking, sniffing, caché | Cabeceras `Content-Security-Policy`, `X-Frame-Options`, `X-Content-Type-Options` y `Cache-Control` |
-| Acceso a archivos internos | `includes/` y `database/` tienen `.htaccess` que bloquea el acceso desde el navegador |
+| Acceso a archivos internos | Bloqueo en la configuración del servidor (Docker/Nginx: solo se sirven las páginas públicas; Apache: `DirectoryMatch`), además de los `.htaccess` |
 
 ---
 
@@ -458,6 +466,7 @@ teatro/
 ├── index.php                 Página principal: obras disponibles
 ├── comprar.php               Pide el identificador y registra la venta
 ├── confirmacion.php          Muestra el número de entrada
+├── consultar.php             Recupera una entrada con su número y el identificador
 ├── includes/
 │   ├── bootstrap.php         Arranque: errores, cabeceras de seguridad y sesión
 │   ├── config.php            Conexión por defecto (XAMPP) y variables de entorno
@@ -465,6 +474,7 @@ teatro/
 │   ├── db.php                Conexión PDO
 │   ├── obras.php             Consultas de obras y registro de ventas
 │   ├── sesion.php            Sesión y tokens del formulario
+│   ├── limites.php           Límites de compras y consultas por IP
 │   ├── helpers.php           Escape, fechas en español y validación
 │   └── layout.php            Cabecera, pie y páginas de mensaje
 ├── assets/css/estilos.css    Estilos

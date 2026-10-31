@@ -19,3 +19,8 @@ Thumbs.db
 
 # Paquete de entrega generado
 /dist/
+
+# Archivos de Windows (descargas, copias desde WSL)
+*:Zone.Identifier
+*Zone.Identifier
+desktop.ini

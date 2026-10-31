@@ -44,7 +44,7 @@ CREATE TABLE `VENTAS` (
     `comprador`    VARCHAR(20)  NOT NULL COMMENT 'Identificador (documento) del comprador',
     `fecha_compra` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`numero_venta`),
-    KEY `idx_ventas_cod_obra` (`cod_obra`),
+    KEY `idx_ventas_obra_comprador` (`cod_obra`, `comprador`),
     KEY `idx_ventas_comprador` (`comprador`),
     CONSTRAINT `fk_ventas_obra`
         FOREIGN KEY (`cod_obra`) REFERENCES `OBRA` (`cod_obra`)
