@@ -219,6 +219,6 @@ guarda como `V-12345678`.
 │   ├── sesion.php         Sesión y token del formulario de compra
 │   ├── helpers.php        Utilidades (escape, fechas, validación)
 │   └── layout.php         Cabecera, pie y páginas de mensaje
-├── assets/                Estilos y JavaScript (opcional: todo funciona sin JS)
+├── assets/css/           Hoja de estilos
 └── database/teatro.sql    Respaldo de la base de datos TEATRO
 ```

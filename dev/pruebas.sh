@@ -84,7 +84,8 @@ for pagina in index.php "comprar.php?obra=1" "comprar.php?obra=999"; do
     contiene "$pagina: carga la hoja de estilos" "$TMP/pagina.html" 'assets/css/estilos.css'
 done
 igual "La hoja de estilos se sirve (200)" "$(codigo "$BASE/assets/css/estilos.css")" "200"
-igual "El JavaScript se sirve (200)" "$(codigo "$BASE/assets/js/app.js")" "200"
+no_contiene "No carga JavaScript (solo PHP, HTML y CSS)" "$TMP/pagina.html" "<script"
+contiene "La política de seguridad prohíbe ejecutar scripts" "$TMP/cabeceras.txt" "script-src 'none'"
 
 # -----------------------------------------------------------------------------
 echo "Parámetros inválidos y URLs inesperadas"

@@ -166,11 +166,6 @@ a { color: var(--color-primario); }
 
 .boton:hover { background: var(--color-primario-oscuro); border-color: var(--color-primario-oscuro); }
 
-.boton:disabled {
-    opacity: 0.65;
-    cursor: progress;
-}
-
 .boton--secundario {
     background: transparent;
     color: var(--color-primario);
