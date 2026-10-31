@@ -71,6 +71,7 @@ no_contiene "No incluye herramientas de desarrollo (dev/)" "$TMP/contenido.txt" 
 no_contiene "No incluye datos locales (.dev/)" "$TMP/contenido.txt" "teatro/.dev/"
 igual "No incluye credenciales locales (config.local.php)" "$(grep -cx 'teatro/includes/config.local.php' "$TMP/contenido.txt")" "0"
 no_contiene "No incluye el enunciado (PDF)" "$TMP/contenido.txt" ".pdf"
+igual "No incluye el README de desarrollo" "$(grep -cx 'teatro/README.md' "$TMP/contenido.txt")" "0"
 igual "La primera página se llama index" "$(grep -c '^teatro/index\.' "$TMP/contenido.txt")" "1"
 
 mkdir -p "$TMP/www"
@@ -151,6 +152,26 @@ servir "$PUERTO_CLAVE_MALA" "$TMP/php-clave.log" \
     TEATRO_DB_HOST="$TEATRO_DB_HOST" TEATRO_DB_PORT="$TEATRO_DB_PORT" \
     TEATRO_DB_USER="$TEATRO_DB_USER" TEATRO_DB_PASSWORD=clave_incorrecta
 comprobar_fallo "$PUERTO_CLAVE_MALA" "$TMP/php-clave.log" "Credenciales incorrectas"
+
+# -----------------------------------------------------------------------------
+echo
+echo "Configuración documentada en el LEAME (includes/config.local.php)"
+# Se sigue el paso 3 del LEAME al pie de la letra: copiar el ejemplo y editarlo.
+CONFIG_LOCAL="$TMP/www/teatro/includes/config.local.php"
+cp "$TMP/www/teatro/includes/config.local.example.php" "$CONFIG_LOCAL"
+sed -i "s/'host'     => 'localhost'/'host'     => '$TEATRO_DB_HOST'/; s/'port'     => 3306/'port'     => $TEATRO_DB_PORT/; \
+        s/'user'     => 'root'/'user'     => '$TEATRO_DB_USER'/; s/'password' => ''/'password' => '$TEATRO_DB_PASSWORD'/" "$CONFIG_LOCAL"
+servir 8004 "$TMP/php-config.log"
+curl -s -o "$TMP/config.html" -w '%{http_code}' "http://localhost:8004/teatro/" > "$TMP/config.code"
+igual "Con credenciales en config.local.php la aplicación conecta" "$(cat "$TMP/config.code")" "200"
+igual "y muestra las 5 obras" "$(grep -c 'class="tarjeta obra"' "$TMP/config.html")" "5"
+
+# Modo de diagnóstico: se activa la línea 'debug' del ejemplo y se apunta a un puerto sin MySQL.
+sed -i "s|// 'debug' => true,|'debug' => true,|; s/'port'     => $TEATRO_DB_PORT/'port'     => 3999/" "$CONFIG_LOCAL"
+servir 8005 "$TMP/php-debug.log"
+curl -s -o "$TMP/debug.html" "http://localhost:8005/teatro/"
+contiene "Con 'debug' => true se muestra el detalle técnico del error" "$TMP/debug.html" "SQLSTATE"
+rm -f "$CONFIG_LOCAL"
 
 "$(dirname "$0")/reiniciar-bd.sh" >/dev/null
 
