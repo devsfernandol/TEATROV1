@@ -3,6 +3,7 @@
 
 # Configuración local con credenciales
 /includes/config.local.php
+/.env
 
 # Entorno de desarrollo local (datos de MySQL, sockets, logs)
 /.dev/

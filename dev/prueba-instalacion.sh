@@ -64,11 +64,16 @@ echo "Paquete de entrega ($REF)"
 ZIP="$RAIZ/dist/teatro.zip"
 python3 -I -c 'import sys, zipfile; print("\n".join(zipfile.ZipFile(sys.argv[1]).namelist()))' "$ZIP" > "$TMP/contenido.txt"
 
-for requerido in teatro/index.php teatro/comprar.php teatro/confirmacion.php teatro/LEAME.md teatro/database/teatro.sql; do
+for requerido in teatro/index.php teatro/comprar.php teatro/confirmacion.php teatro/LEAME.md teatro/database/teatro.sql \
+                teatro/docker-compose.yml teatro/.env.example teatro/docker/Dockerfile teatro/docker/php-fpm.conf \
+                teatro/docker/nginx.conf teatro/docker/fastcgi.conf teatro/docker/php.ini \
+                teatro/docker/db-init/02-usuario.sh teatro/docker/demasiadas-solicitudes.html; do
     contiene "Incluye $requerido" "$TMP/contenido.txt" "$requerido"
 done
 no_contiene "No incluye herramientas de desarrollo (dev/)" "$TMP/contenido.txt" "teatro/dev/"
 no_contiene "No incluye datos locales (.dev/)" "$TMP/contenido.txt" "teatro/.dev/"
+no_contiene "No incluye el despliegue propio del autor (deploy/)" "$TMP/contenido.txt" "teatro/deploy/"
+igual "No incluye un .env con claves" "$(grep -cx 'teatro/.env' "$TMP/contenido.txt")" "0"
 igual "No incluye credenciales locales (config.local.php)" "$(grep -cx 'teatro/includes/config.local.php' "$TMP/contenido.txt")" "0"
 no_contiene "No incluye el enunciado (PDF)" "$TMP/contenido.txt" ".pdf"
 igual "No incluye el README de desarrollo" "$(grep -cx 'teatro/README.md' "$TMP/contenido.txt")" "0"

@@ -37,6 +37,7 @@ Hecho en **PHP sin frameworks**, **MySQL** y **HTML/CSS**, sin JavaScript.
 | Restar 1 a `disponibles` de la obra | `includes/obras.php`, función `registrar_venta()` |
 | Respaldo de la base de datos | `database/teatro.sql` |
 | Archivo LEAME con los pasos adicionales | `LEAME.md` |
+| Pensada para producción | `docker compose up -d` levanta Nginx + PHP-FPM + MySQL listos para producción ([LEAME, sección 3](LEAME.md#3-instalación-en-producción)) |
 | Sin errores | Validaciones, manejo de errores y [105 pruebas automáticas](#8-pruebas-automáticas) |
 
 El recorrido del usuario es:
@@ -126,6 +127,20 @@ Ir a **http://localhost/teatro/**. Debe aparecer **Obras disponibles** con 5 obr
 ---
 
 ## 4. Instalación en Linux
+
+### En producción con Docker (lo más simple)
+
+```bash
+cd teatro
+cp .env.example .env        # opcional: cambiar la clave de la base y el puerto
+docker compose up -d        # http://IP_DEL_SERVIDOR:8080
+```
+
+Crea la base, la importa y deja todo configurado para producción. Los detalles
+(HTTPS, comandos útiles, opción con Apache) están en la
+[sección 3 del LEAME](LEAME.md#3-instalación-en-producción).
+
+### Con Apache
 
 ```bash
 # 1. Paquetes (Ubuntu / Debian)
@@ -455,5 +470,9 @@ teatro/
 ├── assets/css/estilos.css    Estilos
 ├── database/teatro.sql       Respaldo de la base TEATRO con datos de prueba
 ├── LEAME.md                  Instrucciones de instalación de la entrega
+├── docker-compose.yml        Producción con Docker (Nginx + PHP-FPM + MySQL)
+├── .env.example              Configuración opcional de Docker
+├── docker/                   Configuración de Nginx, PHP y MySQL para Docker
+├── deploy/                   Mi despliegue propio con túnel de Cloudflare (no es parte de la entrega)
 └── dev/                      Entorno de desarrollo y pruebas automáticas (no es parte de la entrega)
 ```
