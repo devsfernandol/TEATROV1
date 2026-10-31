@@ -81,6 +81,8 @@ require __DIR__ . '/sesion.php';
 require __DIR__ . '/obras.php';
 require __DIR__ . '/layout.php';
 
+// No revelar la versión de PHP a posibles atacantes.
+header_remove('X-Powered-By');
 header('Content-Type: text/html; charset=utf-8');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
